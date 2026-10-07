@@ -1,6 +1,6 @@
 # Üçüncü taraf yazılımlar
 
-Akış kaynak kodu MIT lisanslıdır. Electron ve Electron Updater kendi MIT lisanslarıyla dağıtılır. Electron dağıtımındaki `LICENSE.electron.txt` ve `LICENSES.chromium.html` dosyaları kurulumda korunur. ZIP okuma için MIT lisanslı yauzl kullanılır.
+DownTube kaynak kodu MIT lisanslıdır. Electron ve Electron Updater kendi MIT lisanslarıyla dağıtılır. Electron dağıtımındaki `LICENSE.electron.txt` ve `LICENSES.chromium.html` dosyaları kurulumda korunur. ZIP okuma için MIT lisanslı yauzl kullanılır.
 
 İndirme araçları kurulum dosyasına gömülmez; ilk açılışta doğrudan geliştiricilerinin GitHub sürümlerinden indirilir. Kullanılan sürüm ve SHA-256 bilgisi yerel durum dosyasında tutulur.
 

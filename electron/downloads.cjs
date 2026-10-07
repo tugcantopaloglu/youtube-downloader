@@ -67,7 +67,7 @@ class Downloads {
     if (this.analyzing) throw new Error('Başka bir bağlantı inceleniyor. Tamamlanmasını bekleyin.')
     url = youtubeURL(url)
     if (typeof playlist !== 'boolean') throw new Error('Geçersiz playlist seçimi.')
-    if (new URL(url).pathname === '/playlist' && !playlist) throw new Error('Playlist bağlantısı için Playlist olarak aç seçeneğini işaretleyin.')
+    if (new URL(url).pathname === '/playlist' && !playlist) throw new Error('Playlist bağlantısı için Playlistteki videoları seç seçeneğini işaretleyin.')
     this.analyzing = true
     const controller = new AbortController()
     this.analysisController = controller

@@ -1,17 +1,17 @@
-# Akış
+# DownTube
 
 Windows 10/11 x64 için Türkçe YouTube video, playlist ve MP3 indirme uygulaması. Electron arayüzü, yt-dlp indirme motoru, FFmpeg/FFprobe ve Deno kullanır.
 
 ## Kullanım
 
-GitHub Releases sayfasından `Akis-Setup-1.0.1.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki Akış kısayolundan çalıştırın.
+GitHub Releases sayfasından `DownTube-Setup-1.0.2.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
 
 İlk açılışta gerekli araçlar GitHub üzerinden indirilir. İlk hazırlık internet bağlantısı gerektirir. Sonraki açılışlarda hazır araçlar kullanılır; güncelleme kontrolü başarısız olursa mevcut araçlarla çalışmaya devam edilir.
 
-1. Video veya playlist bağlantısını yapıştırın. Playlist bağlantıları otomatik algılanır; video bağlantısındaki playlisti dahil etmek istemiyorsanız `Playlist olarak aç` seçimini kaldırın.
+1. Video veya playlist bağlantısını yapıştırın. Playlist bağlantıları otomatik algılanır; video bağlantısındaki playlisti dahil etmek istemiyorsanız `Playlistteki videoları seç` seçimini kaldırın.
 2. Video (MP4) veya ses (MP3) ve kaliteyi seçin.
-3. Kayıt konumunu seçin, bağlantıyı inceleyin ve istediğiniz videoları işaretleyin.
-4. İndirmeyi başlatın. İlerleme İndirme kuyruğunda, tamamlanan dosyalar küçük resimleriyle Kütüphanede görünür.
+3. Gerekirse indirme klasörünü değiştirin ve `İndir` düğmesine basın. Tek video doğrudan kuyruğa eklenir.
+4. Playlistte `Videoları seç` düğmesine basıp istediğiniz videoları işaretleyin ve indirin. İlerleme Kuyruk ekranında, tamamlanan dosyalar küçük resimleriyle İndirilenler ekranında görünür.
 
 Kuyruk sırayla çalışır. Bekletme sıradaki indirmeleri durdurur; devam eden dosya tamamlanır. İptal edilen veya başarısız indirmeler yeniden denenebilir. Geçici alandaki `.part` dosyaları korunur ve yeniden indirmede kullanılabilir. Uygulama kapanınca tamamlanmamış işler sonraki açılışta tekrar kuyruğa alınır. Aynı video, biçim, kalite ve klasör için halen doğrulanmış bir dosya veya kuyruk kaydı varsa tekrar eklenmez.
 
@@ -33,7 +33,7 @@ YouTube oturum doğrulaması isterse Ayarlar’dan Netscape biçiminde bir `cook
 
 yt-dlp, projenin düzenli kullanıcılar için önerdiği nightly kanalından günlük kontrol edilir. FFmpeg ve Deno haftalık kontrol edilir. `Şimdi kontrol et` üç aracı da hemen kontrol eder. İndirilen dosyaların SHA-256 özeti GitHub sürüm bilgisindeki özetle veya projenin checksum dosyasıyla doğrulanır. Arşivler geçici klasörde açılıp çalıştırılabilir dosyalar kontrol edildikten sonra yeni sürüme geçilir. Devam eden indirmeler önceki araç sürümlerini kullanmaya devam eder.
 
-Uygulama güncellemeleri varsayılan olarak `tugcantopaloglu/youtube-downloader` deposundan alınır. Ayarlar’da `kullanıcı/depo` veya GitHub depo adresi girilebilir. Depo herkese açık olmalıdır; erişim tokenı uygulamaya gömülmez. Otomatik uygulama güncellemesi açılışta ve altı saatte bir kontrol edilir. Yeni sürüm arka planda indirilir ve normal kapanışta yüklenir. `Yeniden başlat ve yükle` düğmesi kuyruk boşken kullanılabilir.
+Uygulama güncellemeleri varsayılan olarak `tugcantopaloglu/youtube-downloader` deposundan alınır. Ayarlar’da `kullanıcı/depo` veya GitHub depo adresi girilebilir. Depo herkese açık olmalıdır; erişim tokenı uygulamaya gömülmez. Otomatik uygulama güncellemesi açılışta ve altı saatte bir kontrol edilir. Yeni sürüm arka planda indirilir ve normal kapanışta yüklenir. `Yeniden başlat ve yükle` düğmesi kuyruk boşken kullanılabilir. Mevcut araçlar hazırsa indirme kuyruğu güncelleme kontrolünü beklemeden başlar.
 
 Otomatik güncelleme kapalıysa `Şimdi kontrol et` yalnızca yeni sürümü bulur. İndirme için `Güncellemeyi indir`, kurulum için `Yeniden başlat ve yükle` kullanılır. Tercih kapatıldığında daha önce indirilen güncelleme kapanışta otomatik yüklenmez. Checksum’u uyuşmayan, Windows uygulaması olmayan, eski veya önizleme sürümleri kurulmaz. Devam eden indirme, dosya doğrulama veya araç güncellemesi varken yeniden başlatma engellenir.
 
@@ -70,7 +70,7 @@ Kurulum dosyası oluşturma:
 npm run dist
 ```
 
-Çıktı `release/Akis-Setup-1.0.1.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/Akis.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
+Çıktı `release/DownTube-Setup-1.0.2.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
 
 ## GitHub üzerinden sürüm yayınlama
 
@@ -83,12 +83,14 @@ git push origin main --follow-tags
 
 `npm version` sürümü artırır ve `v1.0.1` gibi bir etiket oluşturur. Sürüm etiketinin `package.json` sürümüyle eşleşmesi zorunludur. `npm run release` ayrıca yerel bilgisayardan `GH_TOKEN` ortam değişkeniyle kullanılabilir. Tokenı kaynak dosyasına yazmayın.
 
-Otomatik güncelleme için Release’te `Akis-Setup-<sürüm>.exe`, `.exe.blockmap` ve `latest.yml` birlikte bulunmalıdır. Workflow bunları üretir. Farklı bir hesap veya depo kullanılacaksa `package.json` içindeki `repository` ve `build.publish` alanlarını değiştirin. Ayarlar’dan değiştirilen depo, kurulu uygulamanın güncelleme kaynağını değiştirir.
+Otomatik güncelleme için Release’te `DownTube-Setup-<sürüm>.exe`, `.exe.blockmap` ve `latest.yml` birlikte bulunmalıdır. Workflow bunları üretir. Farklı bir hesap veya depo kullanılacaksa `package.json` içindeki `repository` ve `build.publish` alanlarını değiştirin. Ayarlar’dan değiştirilen depo, kurulu uygulamanın güncelleme kaynağını değiştirir.
 
 Kurulum dosyası şu anda kod imzası olmadan üretilir. Dağıtımda imzalama kullanılacaksa Electron Builder’ın `CSC_LINK` ve `CSC_KEY_PASSWORD` secret’larını yapılandırın. İmzasız dosya ilk açılışta Windows SmartScreen uyarısı gösterebilir.
 
 ## Yerel veriler
 
 Ayarlar, kuyruk ve geçmiş `%APPDATA%/akis-downloader/state.json` içinde tutulur. Bir önceki geçerli durum `.bak` dosyasına yedeklenir. İndirme araçları `tools`, küçük resimler `thumbnails`, indirme parçaları `download-work` alt klasöründedir. Doğrulanmış MP4/MP3 dosyaları kullanıcının seçtiği klasöre kaydedilir. Araçların eski sürümleri devam eden işlemler bitene kadar saklanır; uygulama boşta kaldığında eski araç sürümleri temizlenir.
+
+Önceki sürümlerden güncellemede ayarları ve geçmişi korumak için kurulum kimliği ve yerel veri klasörü korunur. Yeni kurulumların varsayılan indirme klasörü `Downloads/DownTube` olur; önceden seçilmiş klasörler aynı kalır.
 
 Uygulama kodunda yorum veya otomatik test dosyaları bulunmaz. Sözdizimi kontrolü, paketleme ve elle kullanım doğrulaması için komutlar sağlanır. Üçüncü taraf lisansları için `THIRD_PARTY.md` dosyasına bakın.

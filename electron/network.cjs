@@ -3,7 +3,7 @@ const { pipeline } = require('node:stream/promises')
 const { Readable, Transform } = require('node:stream')
 const { createHash } = require('node:crypto')
 
-const headers = { 'User-Agent': 'Akis-Downloader/1.0', Accept: 'application/vnd.github+json' }
+const headers = { 'User-Agent': `DownTube/${require('../package.json').version}`, Accept: 'application/vnd.github+json' }
 
 async function request(url, timeout = 30000) {
   if (new URL(url).protocol !== 'https:') throw new Error('Güvenli olmayan indirme adresi.')

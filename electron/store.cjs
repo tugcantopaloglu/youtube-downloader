@@ -6,7 +6,7 @@ class Store {
     fs.mkdirSync(directory, { recursive: true })
     this.file = path.join(directory, 'state.json')
     this.defaults = {
-      downloadDirectory: path.join(downloadsDirectory, 'Akış'),
+      downloadDirectory: path.join(downloadsDirectory, 'DownTube'),
       mode: 'video',
       quality: '1080',
       audioQuality: '192',

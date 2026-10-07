@@ -64,7 +64,7 @@ async function validateMedia(file, job, ffprobe, options = {}) {
 async function publishMedia(source, directory, media) {
   await fs.promises.mkdir(directory, { recursive: true })
   const parsed = path.parse(source)
-  const temporary = path.join(directory, `.akis-${randomUUID()}.tmp`)
+  const temporary = path.join(directory, `.downtube-${randomUUID()}.tmp`)
   try {
     await fs.promises.copyFile(source, temporary, fs.constants.COPYFILE_EXCL)
     const descriptor = await fs.promises.open(temporary, 'r+')

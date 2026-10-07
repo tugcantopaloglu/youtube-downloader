@@ -7,6 +7,7 @@ const { Downloads, friendlyError } = require('./downloads.cjs')
 const { AppUpdater, parseRepository } = require('./updater.cjs')
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'akis-thumb', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
+app.setName('DownTube')
 const dataDirectory = process.env.AKIS_DATA_DIR && !app.isPackaged ? path.resolve(process.env.AKIS_DATA_DIR) : path.join(app.getPath('appData'), 'akis-downloader')
 fs.mkdirSync(dataDirectory, { recursive: true })
 app.setPath('userData', dataDirectory)
@@ -135,8 +136,8 @@ function registerHandlers() {
 
 async function createWindow() {
   window = new BrowserWindow({
-    width: 1220, height: 850, minWidth: 960, minHeight: 660, show: false, frame: false,
-    backgroundColor: '#111315', title: 'Akış', icon: path.join(__dirname, '../assets/icon.ico'),
+    width: 1120, height: 780, minWidth: 880, minHeight: 620, show: false, frame: false,
+    backgroundColor: '#111315', title: 'DownTube', icon: path.join(__dirname, '../assets/icon.ico'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true }
   })
   window.setMenu(null)
@@ -152,7 +153,7 @@ async function createWindow() {
     quitPrompt = true
     void (async () => {
       if (downloads.busy() || tools.snapshot().busy) {
-        const result = await dialog.showMessageBox(window, { type: 'question', title: 'Akış kapatılsın mı?', message: 'Devam eden işlemler var.', detail: 'İndirmeler durdurulur ve sonraki açılışta kaldığı yerden devam eder.', buttons: ['Açık tut', 'Kapat'], defaultId: 0, cancelId: 0 })
+        const result = await dialog.showMessageBox(window, { type: 'question', title: 'DownTube kapatılsın mı?', message: 'Devam eden işlemler var.', detail: 'İndirmeler durdurulur ve sonraki açılışta kaldığı yerden devam eder.', buttons: ['Açık tut', 'Kapat'], defaultId: 0, cancelId: 0 })
         if (result.response === 0) { quitPrompt = false; return }
       }
       quitting = true
@@ -184,10 +185,11 @@ if (locked) {
     })
     registerHandlers()
     await createWindow()
+    void downloads.pump()
     void tools.check().then(() => { void downloads.pump(); void downloads.verifyHistory() })
     setTimeout(() => void updater.check(), 8000)
     setInterval(() => { void tools.check(); void updater.check() }, 6 * 60 * 60 * 1000).unref()
-  }).catch(error => { dialog.showErrorBox('Akış başlatılamadı', error.message); app.quit() })
+  }).catch(error => { dialog.showErrorBox('DownTube başlatılamadı', error.message); app.quit() })
   app.on('window-all-closed', () => app.quit())
   app.on('before-quit', event => {
     if (!quitting && window && !window.isDestroyed()) { event.preventDefault(); window.close() }

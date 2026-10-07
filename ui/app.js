@@ -43,6 +43,8 @@ let queueLimit = 50
 let librarySignature = ''
 let search = ''
 let toastTimer
+let downloadURL = ''
+let playlistMode = false
 
 function hydrateIcons(root = document) {
   root.querySelectorAll('[data-icon]').forEach(element => { element.innerHTML = icon(element.dataset.icon) })
@@ -85,8 +87,8 @@ function image(entry, className = '') {
   return `<div class="thumbnail ${className}">${valid ? `<img src="${esc(entry.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : icon(entry.mode === 'audio' ? 'music' : 'video')}${entry.duration ? `<span class="duration">${duration(entry.duration)}</span>` : ''}</div>`
 }
 
-function header(eyebrow, title, description, extra = '') {
-  return `<div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${description}</p></div>${extra}</div>`
+function header(title, description = '', extra = '') {
+  return `<div class="page-heading"><div><h1>${title}</h1>${description ? `<p>${description}</p>` : ''}</div>${extra}</div>`
 }
 
 function empty(title, description, name = 'download') {
@@ -100,21 +102,19 @@ function toolsBanner() {
 }
 
 function downloadPage() {
-  return `${header('YENİ İNDİRME', 'Bir bağlantı yeter.', 'Video, playlist veya sadece müzik. Gerisini Akış halleder.', `<span class="subtle-pill">${icon('shield')}Bilgisayarına kaydedilir</span>`)}
+  return `${header('İndir')}
     <div id="tools-banner">${toolsBanner()}</div>
     <section class="download-panel">
-      <div class="panel-title"><span class="step-number">01</span><h2>YouTube bağlantısını ekle</h2></div>
-      <form id="link-form"><div class="url-field">${icon('link')}<input type="url" id="url" placeholder="YouTube video veya playlist bağlantısını yapıştır" autocomplete="off" required aria-label="YouTube bağlantısı"><button type="submit" id="analyze-button" class="button primary">Bağlantıyı incele ${icon('arrow')}</button></div></form>
-      <div class="link-options"><span>youtube.com ve youtu.be bağlantıları desteklenir</span><label class="checkbox-label"><input type="checkbox" id="playlist">Playlist olarak aç</label></div>
-      <div class="panel-divider"></div>
-      <div class="panel-title"><span class="step-number">02</span><h2>Biçimi ve kaydedilecek yeri seç</h2></div>
+      <label class="field-label" for="url">YouTube bağlantısı</label>
+      <form id="link-form"><div class="url-field">${icon('link')}<input type="url" id="url" value="${esc(downloadURL)}" placeholder="Video veya playlist bağlantısını yapıştırın" autocomplete="off" required aria-label="YouTube bağlantısı"><button type="submit" id="analyze-button" class="button primary">${icon('download')}İndir</button></div></form>
+      <div class="link-options" id="playlist-options" ${playlistMode || downloadURL.includes('list=') ? '' : 'hidden'}><label class="checkbox-label"><input type="checkbox" id="playlist" ${playlistMode ? 'checked' : ''}>Playlistteki videoları seç</label></div>
       <div class="format-row"><div class="format-switch" role="group" aria-label="İndirme biçimi"><button class="format-button ${format === 'video' ? 'active' : ''}" data-format="video">${icon('video')}Video <small>MP4</small></button><button class="format-button ${format === 'audio' ? 'active' : ''}" data-format="audio">${icon('music')}Ses <small>MP3</small></button></div><label class="quality-field"><span id="quality-label">Video kalitesi</span><select id="quality" aria-label="Video kalitesi"><option value="best">En iyi kalite</option><option value="2160">2160p · 4K</option><option value="1440">1440p · 2K</option><option value="1080">1080p · Full HD</option><option value="720">720p · HD</option><option value="480">480p</option></select><select id="audio-quality" aria-label="MP3 kalitesi" hidden><option value="320">320 kbps · Yüksek</option><option value="192">192 kbps · Dengeli</option><option value="128">128 kbps · Küçük dosya</option></select></label></div>
-      <div class="directory-row"><div class="directory-icon">${icon('folder')}</div><div class="directory-info"><span>KAYIT KONUMU</span><strong id="download-directory" title="${esc(state.settings.downloadDirectory)}">${esc(state.settings.downloadDirectory)}</strong></div><button class="button ghost" data-action="directory">Değiştir ${icon('external')}</button></div>
+      <div class="directory-row"><div class="directory-icon">${icon('folder')}</div><div class="directory-info"><span>İndirme klasörü</span><strong id="download-directory" title="${esc(state.settings.downloadDirectory)}">${esc(state.settings.downloadDirectory)}</strong></div><button class="icon-button" data-action="open-directory" aria-label="İndirme klasörünü aç" title="Klasörü aç">${icon('external')}</button><button class="button small" data-action="directory">Değiştir</button></div>
       <p class="quiet-note">Seçilen video çözünürlüğü üst sınırdır; kaynak daha düşük kalitede olabilir.</p>
     </section>
     <section id="preview-section" class="preview-section" hidden></section>
-    <section class="recent-section"><div class="section-heading"><h2>Son indirilenler</h2><button class="text-button" data-page="library">Kütüphaneyi aç ${icon('arrow')}</button></div><div id="recent-content"></div></section>
-    <div class="quiet-note">${icon('clock')}İndirme kuyruğun ve geçmişin, uygulamayı kapattığında da saklanır.</div>`
+    <section class="recent-section"><div class="section-heading"><h2>Son indirilenler</h2><button class="text-button" data-page="library">Tümünü göster ${icon('arrow')}</button></div><div id="recent-content"></div></section>
+    `
 }
 
 function renderPreview() {
@@ -142,11 +142,11 @@ function renderRecent() {
   const element = document.querySelector('#recent-content')
   if (!element) return
   const jobs = completed().slice(0, 3)
-  element.innerHTML = jobs.length ? `<div class="media-grid">${jobs.map(card).join('')}</div>` : `<div class="recent-empty"><div class="empty-mini-icon">${icon('library')}</div><div><strong>Kütüphanen burada başlayacak.</strong><p>İndirdiğin içerikleri küçük resimleriyle görebilir, tek tıkla açabilirsin.</p></div><span class="empty-counter">0 dosya</span></div>`
+  element.innerHTML = jobs.length ? `<div class="media-grid">${jobs.map(card).join('')}</div>` : `<div class="recent-empty"><div class="empty-mini-icon">${icon('library')}</div><strong>Henüz tamamlanan indirme yok.</strong><span class="empty-counter">0 dosya</span></div>`
 }
 
 function queuePage() {
-  return `${header('İNDİRME KUYRUĞU', 'Her şey sırayla.', 'İndirmeleri takip et, iptal et veya yeniden dene.', `<button class="button" data-action="pause" id="pause-button"></button>`)}<div id="tools-banner">${toolsBanner()}</div><div id="queue-summary" class="queue-summary"></div><div id="queue-content"></div>`
+  return `${header('İndirme kuyruğu', '', `<button class="button" data-action="pause" id="pause-button"></button>`)}<div id="tools-banner">${toolsBanner()}</div><div id="queue-summary" class="queue-summary"></div><div id="queue-content"></div>`
 }
 
 function queueRow(job) {
@@ -170,7 +170,7 @@ function renderQueue() {
 }
 
 function libraryPage() {
-  return `${header('KÜTÜPHANE', 'İndirdiklerin, bir arada.', 'Videoların ve müziklerin. Hazır olduğunda tek tıkla aç.', `<button class="button" data-action="open-directory">${icon('folder')}Klasörü aç</button>`)}<div class="library-toolbar"><div class="filter-tabs"><button data-filter="all" class="${libraryFilter === 'all' ? 'active' : ''}">Tümü</button><button data-filter="video" class="${libraryFilter === 'video' ? 'active' : ''}">Videolar</button><button data-filter="audio" class="${libraryFilter === 'audio' ? 'active' : ''}">MP3</button></div><label class="search-field">${icon('search')}<input id="library-search" placeholder="Kütüphanende ara" value="${esc(search)}" aria-label="Kütüphanede ara"></label></div><div id="library-content"></div><p class="quiet-note">${icon('file')}Geçmişten kaldırmak, bilgisayarındaki dosyayı silmez.</p>`
+  return `${header('İndirilenler', '', `<button class="button" data-action="open-directory">${icon('folder')}Klasörü aç</button>`)}<div class="library-toolbar"><div class="filter-tabs"><button data-filter="all" class="${libraryFilter === 'all' ? 'active' : ''}">Tümü</button><button data-filter="video" class="${libraryFilter === 'video' ? 'active' : ''}">Videolar</button><button data-filter="audio" class="${libraryFilter === 'audio' ? 'active' : ''}">MP3</button></div><label class="search-field">${icon('search')}<input id="library-search" placeholder="Dosya veya kanal ara" value="${esc(search)}" aria-label="İndirilen dosyalarda ara"></label></div><div id="library-content"></div><p class="quiet-note">${icon('file')}Geçmişten kaldırmak, bilgisayarındaki dosyayı silmez.</p>`
 }
 
 function renderLibrary() {
@@ -178,11 +178,11 @@ function renderLibrary() {
   if (!element) return
   const jobs = completed().filter(job => (libraryFilter === 'all' || job.mode === libraryFilter) && `${job.title} ${job.channel}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')))
   librarySignature = `${completed().length}:${completed()[0]?.id || ''}:${state.historyChecking ? 1 : 0}`
-  element.innerHTML = jobs.length ? `<div class="library-count">${jobs.length} dosya</div><div class="media-grid">${jobs.slice(0, libraryLimit).map(card).join('')}</div>${jobs.length > libraryLimit ? `<div class="load-more"><span>${Math.min(libraryLimit, jobs.length)} / ${jobs.length} dosya</span><button class="button small" data-action="more-library">Daha fazlasını göster</button></div>` : ''}` : empty(state.historyChecking ? 'İndirme geçmişin kontrol ediliyor.' : completed().length ? 'Eşleşen içerik bulunamadı.' : 'Henüz bir şey indirmedin.', state.historyChecking ? 'Doğrulanan MP4 ve MP3 dosyaları burada görünecek.' : completed().length ? 'Aramanı veya seçtiğin filtreyi değiştirebilirsin.' : 'İndirdiğin video ve MP3 dosyaları küçük resimleriyle burada görünür.', 'library')
+  element.innerHTML = jobs.length ? `<div class="library-count">${jobs.length} dosya</div><div class="media-grid">${jobs.slice(0, libraryLimit).map(card).join('')}</div>${jobs.length > libraryLimit ? `<div class="load-more"><span>${Math.min(libraryLimit, jobs.length)} / ${jobs.length} dosya</span><button class="button small" data-action="more-library">Daha fazlasını göster</button></div>` : ''}` : empty(state.historyChecking ? 'İndirme geçmişi kontrol ediliyor.' : completed().length ? 'Eşleşen dosya bulunamadı.' : 'Henüz indirme yok.', state.historyChecking ? 'Doğrulanan MP4 ve MP3 dosyaları burada görünecek.' : completed().length ? 'Aramayı veya filtreyi değiştirin.' : 'Tamamlanan video ve MP3 dosyaları burada görünür.', 'library')
 }
 
 function settingsPage() {
-  return `${header('AYARLAR', 'Tam istediğin gibi.', 'Kayıt konumunu ve güncelleme tercihlerini yönet.')}
+  return `${header('Ayarlar')}
     <section class="settings-panel"><div class="settings-heading">${icon('folder')}<h2>İndirme tercihleri</h2></div><div class="settings-row"><div><strong>İndirme klasörü</strong><p id="settings-directory">${esc(state.settings.downloadDirectory)}</p></div><button class="button small" data-action="directory">Klasör seç</button></div><div class="settings-row"><div><strong>YouTube oturum dosyası</strong><p id="cookies-path">${state.settings.cookiesFile ? esc(state.settings.cookiesFile) : 'YouTube giriş isterse Netscape biçiminde cookies.txt seçebilirsin.'}</p></div><div class="inline-actions"><button class="button small" data-action="cookies">Dosya seç</button><button class="icon-button" data-action="clear-cookies" aria-label="Oturum dosyasını kaldır" title="Oturum dosyasını kaldır">${icon('close')}</button></div></div></section>
     <section class="settings-panel"><div class="settings-heading">${icon('refresh')}<h2>İndirme araçları</h2><span class="subtle-pill">Otomatik kurulum</span></div><div class="settings-row"><div><strong>Araçları otomatik güncelle</strong><p>yt-dlp günlük; FFmpeg ve Deno haftalık kontrol edilir.</p></div><label class="switch"><input type="checkbox" id="auto-tools" ${state.settings.autoUpdateTools ? 'checked' : ''} aria-label="Araçları otomatik güncelle"><span></span></label></div><div id="tool-versions"></div><div class="settings-bottom"><span id="tools-message"></span><button class="button small" data-action="tools" id="tools-button">${icon('refresh')}Şimdi kontrol et</button></div></section>
     <section class="settings-panel"><div class="settings-heading">${icon('download')}<h2>Uygulama güncellemeleri</h2><span class="version-tag">v${esc(state.version)}</span></div><div class="settings-row"><div><strong>Uygulamayı otomatik güncelle</strong><p>Yeni sürüm arka planda indirilir, uygulama kapanınca yüklenir.</p></div><label class="switch"><input type="checkbox" id="auto-app" ${state.settings.autoUpdateApp ? 'checked' : ''} aria-label="Uygulamayı otomatik güncelle"><span></span></label></div><form id="repository-form" class="repository-form"><label for="repository">GitHub güncelleme deposu</label><div class="repository-field"><span>github.com /</span><input id="repository" value="${esc(state.settings.githubRepository)}" required aria-label="GitHub güncelleme deposu"><button class="button small" type="submit">Kaydet</button></div><p>Herkese açık depoda yayınlanan Windows kurulum sürümleri kullanılır.</p></form><div class="settings-bottom"><span id="update-message"></span><div class="inline-actions"><button class="button small" id="update-button" data-action="update">${icon('refresh')}Şimdi kontrol et</button><button class="button small" id="download-update" data-action="download-update" hidden>Güncellemeyi indir</button><button class="button primary small" id="install-update" data-action="install-update" hidden>Yeniden başlat ve yükle</button></div></div></section>`
@@ -191,7 +191,7 @@ function settingsPage() {
 function renderSettingsStatus() {
   const versions = document.querySelector('#tool-versions')
   if (!versions) return
-  versions.innerHTML = `<div class="tool-versions">${[['ytdlp', 'yt-dlp', 'İndirme motoru'], ['ffmpeg', 'FFmpeg', 'Video ve ses işleme'], ['deno', 'Deno', 'YouTube desteği']].map(([id, name, detail]) => `<div><strong>${name}</strong><small>${detail}</small><span title="${esc(state.tools.versions[id])}">${esc(state.tools.versions[id])}</span></div>`).join('')}</div>`
+  versions.innerHTML = `<div class="tool-versions">${[['ytdlp', 'yt-dlp', 'İndirme motoru'], ['ffmpeg', 'FFmpeg', 'Video ve ses işleme'], ['deno', 'Deno', 'YouTube desteği']].map(([id, name, detail]) => `<div><strong>${name}</strong><small>${detail}</small><span title="${esc(state.tools.versions[id])}">${esc(state.tools.versions[id].split(' ')[0].replace(/^(N-\d+)-.*$/, '$1'))}</span></div>`).join('')}</div>`
   document.querySelector('#tools-message').textContent = state.tools.error || state.tools.message
   document.querySelector('#tools-button').disabled = state.tools.busy
   document.querySelector('#update-message').textContent = state.update.message
@@ -235,16 +235,28 @@ function updateAnalyzeButton() {
   const button = document.querySelector('#analyze-button')
   if (button) {
     button.disabled = analyzing || state.analyzing
-    button.innerHTML = analyzing || state.analyzing ? '<span class="spinner"></span>İnceleniyor' : `Bağlantıyı incele ${icon('arrow')}`
+    button.innerHTML = analyzing || state.analyzing ? '<span class="spinner"></span>Hazırlanıyor' : `${icon('download')}${document.querySelector('#playlist')?.checked ? 'Videoları seç' : 'İndir'}`
+    document.querySelectorAll('#url, #playlist, #quality, #audio-quality, [data-format], [data-action="directory"]').forEach(control => { control.disabled = analyzing || state.analyzing })
   }
+}
+
+async function enqueueVideos(result, videoIds, options) {
+  if (enqueueing) return
+  enqueueing = true
+  updateSelection()
+  try {
+    const queued = await api.enqueue({ previewId: result.id, videoIds, ...options })
+    toast(`${queued.added} indirme kuyruğa eklendi.${queued.duplicates ? ` ${queued.duplicates} zaten indirilmiş veya sırada.` : ''}`)
+    if (queued.added) { preview = null; selection.clear(); downloadURL = ''; playlistMode = false; page = 'queue'; renderPage() }
+  } finally { enqueueing = false; updateSelection() }
 }
 
 function updateState(next) {
   state = next
   document.querySelector('#queue-count').textContent = unfinished().length
-  document.querySelector('#engine-label').textContent = state.tools.busy ? 'Araçlar hazırlanıyor' : state.tools.ready ? 'İndirmeye hazır' : 'Kurulum gerekli'
+  document.querySelector('#engine-label').textContent = state.tools.ready ? state.tools.busy ? 'Güncelleme kontrolü' : 'İndirmeye hazır' : state.tools.busy ? 'Araçlar indiriliyor' : 'Kurulum gerekli'
   document.querySelector('#engine-dot').className = `status-dot ${state.tools.ready ? 'ready' : state.tools.busy ? 'busy' : 'error'}`
-  document.querySelector('#app-version').textContent = `Akış ${state.version}`
+  document.querySelector('#app-version').textContent = `DownTube ${state.version}`
   const banner = document.querySelector('#tools-banner')
   if (banner) banner.innerHTML = toolsBanner()
   const directory = document.querySelector('#download-directory')
@@ -299,17 +311,10 @@ document.addEventListener('click', event => {
       case 'install-update': await api.installUpdate(); break
       case 'clear-preview': preview = null; selection.clear(); renderPreview(); break
       case 'enqueue': {
-        if (enqueueing || !preview) return
+        if (!preview) return
         const quality = document.querySelector('#quality').value
         const audioQuality = document.querySelector('#audio-quality').value
-        enqueueing = true
-        updateSelection()
-        try {
-          await api.saveSettings({ mode: format, quality, audioQuality })
-          const result = await api.enqueue({ previewId: preview.id, videoIds: [...selection], mode: format, quality, audioQuality })
-          toast(`${result.added} indirme kuyruğa eklendi.${result.duplicates ? ` ${result.duplicates} zaten indirilmiş veya sırada.` : ''}`)
-          if (result.added) { preview = null; selection.clear(); page = 'queue'; renderPage() }
-        } finally { enqueueing = false; updateSelection() }
+        await enqueueVideos(preview, [...selection], { mode: format, quality, audioQuality })
         break
       }
     }
@@ -322,6 +327,7 @@ document.addEventListener('submit', event => {
     if (analyzing) return
     const url = document.querySelector('#url').value
     const playlist = document.querySelector('#playlist').checked
+    const options = { mode: format, quality: document.querySelector('#quality').value, audioQuality: document.querySelector('#audio-quality').value }
     analyzing = true
     updateAnalyzeButton()
     void action(async () => {
@@ -333,6 +339,10 @@ document.addEventListener('submit', event => {
         }
         preview = result
         selection = new Set(preview.entries.map(entry => entry.videoId))
+        if (!result.isPlaylist) {
+          await enqueueVideos(result, result.entries.map(entry => entry.videoId), options)
+          return
+        }
         if (page === 'download') { renderPreview(); document.querySelector('#preview-section').scrollIntoView({ behavior: 'smooth', block: 'start' }) }
         else toast('Bağlantı hazır. Yeni indirme ekranında seçim yapabilirsin.')
       } finally { analyzing = false; updateAnalyzeButton() }
@@ -357,25 +367,31 @@ document.addEventListener('change', event => {
     void action(async () => { try { await api.saveSettings({ [key]: input.checked }) } catch (error) { input.checked = state.settings[key]; throw error } })
   } else if (input.id === 'quality' || input.id === 'audio-quality') {
     void action(() => api.saveSettings({ [input.id === 'quality' ? 'quality' : 'audioQuality']: input.value }))
+  } else if (input.id === 'playlist') {
+    playlistMode = input.checked
+    updateAnalyzeButton()
   }
 })
 
 document.addEventListener('input', event => {
   if (event.target.id === 'library-search') { search = event.target.value; libraryLimit = 60; renderLibrary() }
   if (event.target.id === 'url') {
+    downloadURL = event.target.value
     if (preview) { preview = null; selection.clear(); renderPreview() }
     try {
       const url = new URL(event.target.value)
       document.querySelector('#playlist').checked = url.searchParams.has('list') || url.pathname === '/playlist'
     } catch { document.querySelector('#playlist').checked = false }
+    playlistMode = document.querySelector('#playlist').checked
+    document.querySelector('#playlist-options').hidden = !document.querySelector('#playlist').checked && !event.target.value.includes('list=')
+    updateAnalyzeButton()
   }
 })
 
-document.querySelector('#footer-folder').addEventListener('click', () => void action(() => api.openDirectory()))
 hydrateIcons()
 if (api) {
   api.onState(updateState)
   void action(async () => { state = await api.state(); format = state.settings.mode; renderPage(); updateState(state) })
 } else {
-  main.innerHTML = `${header('AKIŞ', 'Masaüstünde çalışır.', 'Bu arayüzü kullanmak için Akış uygulamasını aç.')}<div class="preview-info">Geliştirme için <code>npm run dev</code>, normal kullanım için <code>npm start</code> komutunu çalıştır.</div>`
+  main.innerHTML = `${header('DownTube', 'Bu arayüzü kullanmak için DownTube uygulamasını açın.')}<div class="preview-info">Geliştirme için <code>npm run dev</code>, normal kullanım için <code>npm start</code> komutunu çalıştır.</div>`
 }

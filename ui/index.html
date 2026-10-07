@@ -4,28 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: akis-thumb: https://i.ytimg.com; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-    <title>Akış</title>
+    <title>DownTube</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 7h14M9 14h9M9 21h4M22 17v10m-4-4 4 4 4-4"/></svg></span><div><strong>akış<span>.</span></strong><small>İçerik yanında.</small></div></div>
-        <div class="nav-caption">ÇALIŞMA ALANI</div>
+        <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 5h9a11 11 0 0 1 0 22H7Z" fill="#18382a"/><path d="M16 10v12m-4-4 4 4 4-4" fill="none" stroke="#b9e7ce" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>DownTube</strong></div>
         <nav aria-label="Ana menü">
-          <button class="nav-item selected" data-page="download"><span data-icon="plus"></span>Yeni indirme</button>
+          <button class="nav-item selected" data-page="download"><span data-icon="download"></span>İndir</button>
           <button class="nav-item" data-page="queue"><span data-icon="queue"></span>Kuyruk<span class="nav-badge" id="queue-count">0</span></button>
-          <button class="nav-item" data-page="library"><span data-icon="library"></span>Kütüphane</button>
+          <button class="nav-item" data-page="library"><span data-icon="library"></span>İndirilenler</button>
         </nav>
         <div class="sidebar-bottom">
           <button class="nav-item" data-page="settings"><span data-icon="settings"></span>Ayarlar</button>
-          <div class="engine-indicator"><span class="status-dot" id="engine-dot"></span><div><strong id="engine-label">Hazırlanıyor</strong><small id="app-version">Akış 1.0.0</small></div></div>
+          <div class="engine-indicator"><span class="status-dot" id="engine-dot"></span><div><strong id="engine-label">Hazırlanıyor</strong><small id="app-version">DownTube</small></div></div>
         </div>
       </aside>
       <div class="workspace">
-        <header class="titlebar"><span>AKIŞ <span class="titlebar-divider">/</span> YOUTUBE İNDİRİCİ</span><div class="window-controls"><button data-window="minimize" aria-label="Simge durumuna küçült"><span data-icon="minus"></span></button><button data-window="maximize" aria-label="Büyüt veya geri yükle"><span data-icon="square"></span></button><button class="close-window" data-window="close" aria-label="Kapat"><span data-icon="close"></span></button></div></header>
+        <header class="titlebar"><span>DownTube</span><div class="window-controls"><button data-window="minimize" aria-label="Simge durumuna küçült"><span data-icon="minus"></span></button><button data-window="maximize" aria-label="Büyüt veya geri yükle"><span data-icon="square"></span></button><button class="close-window" data-window="close" aria-label="Kapat"><span data-icon="close"></span></button></div></header>
         <main id="main"></main>
-        <footer class="workspace-footer"><span><span class="footer-dot"></span>Bilgisayarına indir. İstediğin zaman aç.</span><button id="footer-folder"><span data-icon="folder"></span>İndirme klasörü</button></footer>
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
