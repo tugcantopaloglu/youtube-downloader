@@ -34,8 +34,8 @@ function cleanEntry(entry) {
 function friendlyError(error) {
   const text = error.message || String(error)
   if (failureKind(error) === 'rate-limit') return 'YouTube geçici istek sınırına ulaşıldı. Bir süre bekleyip yeniden deneyin.'
-  if (/sign in|bot|confirm you.re not/i.test(text)) return 'YouTube oturum doğrulaması istiyor. Ayarlar’dan cookies.txt dosyası seçip yeniden deneyin.'
   if (/private video|video unavailable|removed|not available/i.test(text)) return 'Bu video kullanılamıyor, kaldırılmış veya erişime kapalı.'
+  if (failureKind(error) === 'authentication') return 'YouTube oturum dosyası veya doğrulama gerekiyor. Ayarlar’dan geçerli cookies.txt dosyası seçip yeniden deneyin.'
   if (/No space|disk full|not enough space/i.test(text)) return 'İndirme klasörünün bulunduğu diskte yeterli boş alan yok.'
   if (/permission denied|access is denied|EACCES|EPERM/i.test(text)) return 'Dosya erişimi engellendi. İndirme klasörünü ve dosyanın başka bir uygulamada açık olup olmadığını kontrol edin.'
   if (/timed out|unable to download|ENOTFOUND|ECONNRESET|fetch failed/i.test(text)) return 'Bağlantı kurulamadı. İnternet bağlantınızı kontrol edip yeniden deneyin.'
