@@ -1,0 +1,8 @@
+node_modules/
+dist-ui/
+release/
+.local/
+*.log
+.env
+.env.*
+!.env.example

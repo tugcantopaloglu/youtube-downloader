@@ -1,0 +1,49 @@
+{
+  "name": "akis-downloader",
+  "productName": "Akis",
+  "version": "1.0.0",
+  "description": "YouTube video, playlist ve MP3 indirme uygulaması",
+  "author": "Tuğcan Topaloğlu",
+  "license": "MIT",
+  "main": "electron/main.cjs",
+  "repository": { "type": "git", "url": "https://github.com/tugcantopaloglu/youtube-downloader.git" },
+  "scripts": {
+    "start": "npm run build:ui && electron .",
+    "dev": "node scripts/dev.cjs",
+    "build:ui": "vite build",
+    "check": "node scripts/check.cjs",
+    "pack": "npm run check && npm run build:ui && electron-builder --win --x64 --dir",
+    "dist": "npm run check && npm run build:ui && electron-builder --win nsis --x64 --publish never",
+    "release": "npm run check && npm run build:ui && electron-builder --win nsis --x64 --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9",
+    "yauzl": "3.4.0"
+  },
+  "devDependencies": {
+    "electron": "44.6.0",
+    "electron-builder": "26.15.3",
+    "vite": "8.3.3"
+  },
+  "build": {
+    "appId": "com.tugcantopaloglu.akis",
+    "productName": "Akis",
+    "artifactName": "Akis-Setup-${version}.${ext}",
+    "directories": { "output": "release", "buildResources": "assets" },
+    "files": ["electron/**/*", "dist-ui/**/*", "assets/icon.ico", "package.json", "LICENSE", "THIRD_PARTY.md"],
+    "asar": true,
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "assets/icon.ico" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Akış",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["tr_TR", "en_US"]
+    },
+    "publish": [{ "provider": "github", "owner": "tugcantopaloglu", "repo": "youtube-downloader", "releaseType": "release" }]
+  }
+}
