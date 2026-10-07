@@ -93,7 +93,7 @@ class AppUpdater {
   install() {
     if (this.state.status !== 'downloaded') throw new Error('Yüklemeye hazır bir güncelleme yok.')
     if (this.isBusy()) throw new Error('Önce devam eden indirme veya bağlantı incelemesinin bitmesini bekleyin.')
-    this.engine.quitAndInstall(false, true)
+    this.engine.quitAndInstall(true, true)
   }
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "downtube",
   "productName": "DownTube",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "YouTube video, playlist ve MP3 indirme uygulaması",
   "author": "Tuğcan Topaloğlu",
   "license": "MIT",
@@ -57,6 +57,7 @@
       "icon": "assets/icon.ico"
     },
     "nsis": {
+      "include": "assets/installer.nsh",
       "oneClick": false,
       "perMachine": false,
       "allowElevation": false,

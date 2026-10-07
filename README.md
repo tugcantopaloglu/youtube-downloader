@@ -4,7 +4,7 @@ Windows 10/11 x64 için Türkçe YouTube video, playlist ve MP3 indirme uygulama
 
 ## Kullanım
 
-GitHub Releases sayfasından `DownTube-Setup-1.0.4.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
+GitHub Releases sayfasından `DownTube-Setup-1.0.5.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
 
 İlk açılışta gerekli araçlar GitHub üzerinden indirilir. İlk hazırlık internet bağlantısı gerektirir. Sonraki açılışlarda hazır araçlar kullanılır; güncelleme kontrolü başarısız olursa mevcut araçlarla çalışmaya devam edilir.
 
@@ -45,7 +45,7 @@ YouTube oturum doğrulaması isterse Ayarlar’dan Netscape biçiminde bir `cook
 
 yt-dlp, projenin düzenli kullanıcılar için önerdiği nightly kanalından günlük kontrol edilir. FFmpeg ve Deno haftalık kontrol edilir. `Şimdi kontrol et` üç aracı da hemen kontrol eder. İndirilen dosyaların SHA-256 özeti GitHub sürüm bilgisindeki özetle veya projenin checksum dosyasıyla doğrulanır. Arşivler geçici klasörde açılıp çalıştırılabilir dosyalar kontrol edildikten sonra yeni sürüme geçilir. Devam eden indirmeler önceki araç sürümlerini kullanmaya devam eder.
 
-Uygulama güncellemeleri varsayılan olarak `tugcantopaloglu/youtube-downloader` deposundan alınır. Ayarlar’da `kullanıcı/depo` veya GitHub depo adresi girilebilir. Depo herkese açık olmalıdır; erişim tokenı uygulamaya gömülmez. Otomatik uygulama güncellemesi açılışta ve altı saatte bir kontrol edilir. Yeni sürüm arka planda indirilir ve normal kapanışta yüklenir. `Yeniden başlat ve yükle` düğmesi kuyruk boşken kullanılabilir. Mevcut araçlar hazırsa indirme kuyruğu güncelleme kontrolünü beklemeden başlar.
+Uygulama güncellemeleri varsayılan olarak `tugcantopaloglu/youtube-downloader` deposundan alınır. Ayarlar’da `kullanıcı/depo` veya GitHub depo adresi girilebilir. Depo herkese açık olmalıdır; erişim tokenı uygulamaya gömülmez. Otomatik uygulama güncellemesi açılışta ve altı saatte bir kontrol edilir. Yeni sürüm arka planda indirilir ve normal kapanışta yüklenir. `Yeniden başlat ve yükle` düğmesi kuyruk boşken kullanılabilir; uygulama kapanır, güncelleme kurulum ekranı açılmadan mevcut konuma yüklenir ve yeni sürüm otomatik açılır. Eski sürümlerin güncelleme çağrıları da sessiz kurulur. İlk kurulumda klasör seçme ekranı kullanılabilir. Mevcut araçlar hazırsa indirme kuyruğu güncelleme kontrolünü beklemeden başlar.
 
 Otomatik güncelleme kapalıysa `Şimdi kontrol et` yalnızca yeni sürümü bulur. İndirme için `Güncellemeyi indir`, kurulum için `Yeniden başlat ve yükle` kullanılır. Tercih kapatıldığında daha önce indirilen güncelleme kapanışta otomatik yüklenmez. Checksum’u uyuşmayan, Windows uygulaması olmayan, eski veya önizleme sürümleri kurulmaz. Devam eden indirme, dosya doğrulama veya araç güncellemesi varken yeniden başlatma engellenir.
 
@@ -82,7 +82,7 @@ Kurulum dosyası oluşturma:
 npm run dist
 ```
 
-Çıktı `release/DownTube-Setup-1.0.4.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
+Çıktı `release/DownTube-Setup-1.0.5.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
 
 ## GitHub üzerinden sürüm yayınlama
 
