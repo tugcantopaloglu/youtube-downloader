@@ -160,7 +160,7 @@ class ToolManager {
 
   arguments(settings = this.store.data.settings) {
     const tools = this.store.data.tools
-    const args = ['--ignore-config', '--no-plugin-dirs', '--no-colors', '--encoding', 'utf-8', '--socket-timeout', '30', '--retries', '5', '--fragment-retries', '5', '--no-js-runtimes', '--js-runtimes', `deno:${tools.deno.path}`, '--ffmpeg-location', path.dirname(tools.ffmpeg.path)]
+    const args = ['--ignore-config', '--no-plugin-dirs', '--no-colors', '--encoding', 'utf-8', '--socket-timeout', '30', '--retries', '5', '--fragment-retries', '5', '--extractor-retries', '3', '--retry-sleep', 'http:exp=1:30', '--retry-sleep', 'fragment:exp=1:30', '--retry-sleep', 'extractor:exp=2:30', '--sleep-requests', '0.75', '--concurrent-fragments', '1', '--abort-on-unavailable-fragments', '--no-js-runtimes', '--js-runtimes', `deno:${tools.deno.path}`, '--ffmpeg-location', path.dirname(tools.ffmpeg.path)]
     if (settings.cookiesFile) {
       if (!fs.existsSync(settings.cookiesFile)) throw new Error('Seçilen cookies.txt dosyası bulunamadı. Ayarlar ekranından yeniden seçin.')
       args.push('--cookies', settings.cookiesFile)

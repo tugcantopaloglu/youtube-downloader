@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol, autoUpdater: nativeUpdater } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, powerSaveBlocker, powerMonitor, autoUpdater: nativeUpdater } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
 const { Store } = require('./store.cjs')
@@ -23,12 +23,18 @@ let updater
 let quitting = false
 let quitPrompt = false
 let notifyTimer
+let powerBlocker = null
 
 function snapshot() {
-  return { version: app.getVersion(), settings: store.data.settings, jobs: store.data.jobs, queuePaused: store.data.queuePaused, analyzing: downloads.analyzing, historyChecking: downloads.historyChecking, tools: tools.snapshot(), update: updater.state }
+  return { version: app.getVersion(), settings: store.data.settings, jobs: store.data.jobs, queuePaused: store.data.queuePaused, queueRecovery: downloads.queueState(), analyzing: downloads.analyzing, historyChecking: downloads.historyChecking, tools: tools.snapshot(), update: updater.state }
 }
 
 function notify() {
+  if (downloads && store) {
+    const keepAwake = !quitting && store.data.settings.keepAwake && (downloads.busy() || (!store.data.queuePaused && store.data.jobs.some(job => downloads.pending(job))))
+    if (keepAwake && powerBlocker === null) powerBlocker = powerSaveBlocker.start('prevent-app-suspension')
+    if (!keepAwake && powerBlocker !== null) { powerSaveBlocker.stop(powerBlocker); powerBlocker = null }
+  }
   if (notifyTimer) return
   notifyTimer = setTimeout(() => {
     notifyTimer = null
@@ -48,7 +54,7 @@ function handle(channel, callback) {
 async function saveSettings(patch) {
   if (!patch || typeof patch !== 'object') throw new Error('Geçersiz ayarlar.')
   const next = { ...store.data.settings }
-  for (const key of ['autoUpdateTools', 'autoUpdateApp']) {
+  for (const key of ['autoUpdateTools', 'autoUpdateApp', 'keepAwake']) {
     if (key in patch) {
       if (typeof patch[key] !== 'boolean') throw new Error('Geçersiz güncelleme ayarı.')
       next[key] = patch[key]
@@ -80,6 +86,7 @@ function registerHandlers() {
   handle('retry', id => downloads.retry(id))
   handle('remove', id => downloads.remove(id))
   handle('pause', paused => downloads.pause(paused))
+  handle('network-restored', () => downloads.networkRestored())
   handle('save-settings', saveSettings)
   handle('choose-directory', async () => {
     const result = await dialog.showOpenDialog(window, { title: 'İndirme klasörünü seçin', defaultPath: store.data.settings.downloadDirectory, properties: ['openDirectory', 'createDirectory'] })
@@ -172,8 +179,8 @@ if (locked) {
     const directory = app.getPath('userData')
     store = new Store(directory, app.getPath('downloads'))
     tools = new ToolManager(store, path.join(directory, 'tools'), notify, () => downloads?.busy())
-    downloads = new Downloads(store, tools, path.join(directory, 'thumbnails'), notify)
-    updater = new AppUpdater(app, store, notify, () => downloads.busy() || tools.snapshot().busy || store.data.jobs.some(job => job.status === 'queued'))
+    downloads = new Downloads(store, tools, path.join(directory, 'thumbnails'), notify, () => net.isOnline())
+    updater = new AppUpdater(app, store, notify, () => downloads.busy() || tools.snapshot().busy || store.data.jobs.some(job => downloads.pending(job)))
     nativeUpdater.on('before-quit-for-update', () => { quitting = true; store.save() })
     protocol.handle('akis-thumb', request => {
       const url = new URL(request.url)
@@ -185,6 +192,7 @@ if (locked) {
     })
     registerHandlers()
     await createWindow()
+    powerMonitor.on('resume', () => { downloads.networkRestored(); notify() })
     void downloads.pump()
     void tools.check().then(() => { void downloads.pump(); void downloads.verifyHistory() })
     setTimeout(() => void updater.check(), 8000)

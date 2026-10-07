@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('akis', {
   retry: id => call('retry', id),
   remove: id => call('remove', id),
   pause: paused => call('pause', paused),
+  networkRestored: () => call('network-restored'),
   saveSettings: settings => call('save-settings', settings),
   chooseDirectory: () => call('choose-directory'),
   chooseCookies: () => call('choose-cookies'),

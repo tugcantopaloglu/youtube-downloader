@@ -3,6 +3,7 @@ const path = require('node:path')
 const { randomUUID, createHash } = require('node:crypto')
 const { runProcess, stopProcess, abortable } = require('./process.cjs')
 const { validateMedia, publishMedia, fileDigest } = require('./media.cjs')
+const { failureKind, recoveryPlan } = require('./recovery.cjs')
 
 const activeStatuses = ['preparing', 'downloading', 'processing', 'verifying', 'saving', 'cancelling']
 const youtubeHosts = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'www.youtu.be'])
@@ -32,6 +33,7 @@ function cleanEntry(entry) {
 
 function friendlyError(error) {
   const text = error.message || String(error)
+  if (failureKind(error) === 'rate-limit') return 'YouTube geçici istek sınırına ulaşıldı. Bir süre bekleyip yeniden deneyin.'
   if (/sign in|bot|confirm you.re not/i.test(text)) return 'YouTube oturum doğrulaması istiyor. Ayarlar’dan cookies.txt dosyası seçip yeniden deneyin.'
   if (/private video|video unavailable|removed|not available/i.test(text)) return 'Bu video kullanılamıyor, kaldırılmış veya erişime kapalı.'
   if (/No space|disk full|not enough space/i.test(text)) return 'İndirme klasörünün bulunduğu diskte yeterli boş alan yok.'
@@ -41,11 +43,12 @@ function friendlyError(error) {
 }
 
 class Downloads {
-  constructor(store, tools, directory, notify) {
+  constructor(store, tools, directory, notify, isOnline = () => true) {
     this.store = store
     this.tools = tools
     this.directory = directory
     this.notify = notify
+    this.isOnline = isOnline
     this.previews = new Map()
     this.current = null
     this.analysisChild = null
@@ -56,6 +59,9 @@ class Downloads {
     this.verifications = new Map()
     this.verificationController = new AbortController()
     this.historyChecking = false
+    this.wakeTimer = null
+    this.store.data.queueRecovery ||= { until: 0, reason: '', message: '', rateLimitCount: 0 }
+    this.store.data.nextDownloadAt ||= 0
     this.workDirectory = path.join(path.dirname(directory), 'download-work')
     fs.mkdirSync(directory, { recursive: true })
     fs.mkdirSync(this.workDirectory, { recursive: true })
@@ -63,13 +69,77 @@ class Downloads {
 
   busy() { return Boolean(this.current || this.analyzing || this.verifications.size) }
 
+  pending(job) { return ['queued', 'waiting'].includes(job.status) }
+
+  queueState() {
+    return { ...this.store.data.queueRecovery, nextDownloadAt: this.store.data.nextDownloadAt }
+  }
+
+  networkRestored() {
+    if (this.stopping || this.store.data.queuePaused || !this.isOnline()) return
+    if (this.store.data.queueRecovery.reason === 'offline') {
+      this.store.data.queueRecovery = { ...this.store.data.queueRecovery, until: 0, reason: '', message: '' }
+      for (const job of this.store.data.jobs) if (job.status === 'waiting') job.retryAt = 0
+      this.store.save()
+      this.notify()
+    }
+    void this.pump()
+  }
+
+  wakeAt(timestamp) {
+    clearTimeout(this.wakeTimer)
+    if (this.stopping) return
+    this.wakeTimer = setTimeout(() => { this.wakeTimer = null; void this.pump() }, Math.min(30000, Math.max(0, timestamp - Date.now())))
+    this.wakeTimer.unref()
+  }
+
+  recover(error, job) {
+    const kind = failureKind(error)
+    if (kind === 'permanent') return false
+    const previous = this.store.data.queueRecovery
+    const attempts = { ...previous.attempts, [kind]: (previous.attempts?.[kind] || 0) + 1 }
+    const attempt = kind === 'rate-limit' ? previous.rateLimitCount + 1 : attempts[kind]
+    const plan = recoveryPlan(kind, attempt)
+    const until = plan.delay ? Date.now() + plan.delay : 0
+    this.store.data.queueRecovery = {
+      until: Math.max(until, previous.until), reason: kind, attempts,
+      rateLimitCount: kind === 'rate-limit' ? attempt : previous.rateLimitCount,
+      message: plan.message + (!plan.delay && ['connection', 'forbidden', 'rate-limit'].includes(kind) ? ' Otomatik denemeler durduruldu. Sorunu kontrol edip kuyruğu devam ettirin.' : '')
+    }
+    if (job) {
+      job.status = 'waiting'
+      job.retryAt = this.store.data.queueRecovery.until
+      job.error = plan.message
+    }
+    if (!plan.delay) this.store.data.queuePaused = true
+    this.store.save()
+    this.notify()
+    if (until && !this.store.data.queuePaused) this.wakeAt(this.store.data.queueRecovery.until)
+    return true
+  }
+
+  stopOnServiceLimit(line, current) {
+    if (current.serviceError || current.controller.signal.aborted) return
+    const error = new Error(line)
+    if (!['rate-limit', 'authentication'].includes(failureKind(error))) return
+    current.serviceError = error
+    current.controller.abort()
+  }
+
   async analyze({ url, playlist = false } = {}) {
     if (this.analyzing) throw new Error('Başka bir bağlantı inceleniyor. Tamamlanmasını bekleyin.')
     url = youtubeURL(url)
     if (typeof playlist !== 'boolean') throw new Error('Geçersiz playlist seçimi.')
     if (new URL(url).pathname === '/playlist' && !playlist) throw new Error('Playlist bağlantısı için Playlistteki videoları seç seçeneğini işaretleyin.')
+    const recovery = this.store.data.queueRecovery
+    if (recovery.until > Date.now() || (this.store.data.queuePaused && recovery.reason)) throw new Error(recovery.message + (recovery.until > Date.now() ? ` ${Math.ceil((recovery.until - Date.now()) / 60000)} dakika sonra yeniden deneyin.` : ''))
+    if (!this.isOnline()) throw new Error('İnternet bağlantısı yok. Bağlantı geldiğinde tekrar deneyin.')
+    const cached = [...this.previews.values()].find(item => item.sourceURL === url && item.playlist === playlist && Date.now() - item.analyzedAt < 10 * 60000)
+    if (cached) return cached
     this.analyzing = true
     const controller = new AbortController()
+    const analysis = { controller, serviceError: null }
+    let extracting = false
     this.analysisController = controller
     let finished
     this.analysisDone = new Promise(resolve => { finished = resolve })
@@ -77,17 +147,20 @@ class Downloads {
     try {
       await abortable(this.tools.ensure(), controller.signal)
       const args = [...this.tools.arguments(), '--dump-single-json', '--skip-download', '--flat-playlist', '--playlist-end', '2000', playlist ? '--yes-playlist' : '--no-playlist', '--', url]
-      const { stdout } = await runProcess(this.store.data.tools.ytdlp.path, args, { timeout: 180000, signal: controller.signal, onSpawn: child => { this.analysisChild = child } })
+      extracting = true
+      const { stdout } = await runProcess(this.store.data.tools.ytdlp.path, args, { timeout: 180000, signal: controller.signal, onSpawn: child => { this.analysisChild = child }, onErrorLine: line => this.stopOnServiceLimit(line, analysis) })
       const info = JSON.parse(stdout)
       const rawEntries = info.entries || [info]
       const entries = [...new Map(rawEntries.filter(Boolean).map(cleanEntry).filter(Boolean).map(entry => [entry.videoId, entry])).values()]
       if (!entries.length) throw new Error('Bu bağlantıda indirilebilir bir video bulunamadı.')
       const id = randomUUID()
-      const result = { id, title: info.title || entries[0].title, isPlaylist: Boolean(info.entries), entries, skipped: rawEntries.length - entries.length, truncated: Number(info.playlist_count) > 2000 }
+      const result = { id, sourceURL: url, playlist, analyzedAt: Date.now(), title: info.title || entries[0].title, isPlaylist: Boolean(info.entries), entries, skipped: rawEntries.length - entries.length, truncated: Number(info.playlist_count) > 2000 }
       if (this.previews.size > 10) this.previews.delete(this.previews.keys().next().value)
       this.previews.set(id, result)
       return result
     } catch (error) {
+      error = analysis.serviceError || error
+      if (extracting && !this.stopping && error.name !== 'AbortError') this.recover(error)
       throw new Error(friendlyError(error))
     } finally {
       this.analyzing = false
@@ -114,7 +187,7 @@ class Downloads {
     let duplicates = 0
     for (const entry of selected) {
       const key = `${entry.videoId}:${mode}:${mode === 'audio' ? audioQuality : quality}:${settings.downloadDirectory}`
-      let existing = this.store.data.jobs.find(job => job.key === key && ['queued', ...activeStatuses].includes(job.status))
+      let existing = this.store.data.jobs.find(job => job.key === key && (this.pending(job) || activeStatuses.includes(job.status)))
       if (!existing) {
         const candidates = this.store.data.jobs.filter(job => job.key === key && job.status === 'completed')
         for (const candidate of candidates) {
@@ -150,10 +223,32 @@ class Downloads {
 
   async pump() {
     if (this.current || this.stopping || this.store.data.queuePaused) return
-    const job = [...this.store.data.jobs].reverse().find(item => item.status === 'queued')
+    const recovery = this.store.data.queueRecovery
+    if (recovery.until > Date.now()) { this.wakeAt(recovery.until); return }
+    if (recovery.until) {
+      this.store.data.queueRecovery = { ...recovery, until: 0, reason: '', message: '' }
+      this.store.save()
+      this.notify()
+    }
+    const job = [...this.store.data.jobs].reverse().find(item => this.pending(item))
     if (!job) { this.tools.cleanup(); return }
+    if (!this.isOnline()) {
+      const until = Date.now() + 30000
+      this.store.data.queueRecovery = { ...this.store.data.queueRecovery, until, reason: 'offline', message: 'İnternet bağlantısı bekleniyor. Bağlantı geldiğinde kuyruk otomatik devam edecek.' }
+      job.status = 'waiting'
+      job.retryAt = until
+      job.error = 'İnternet bağlantısı bekleniyor.'
+      this.store.save()
+      this.notify()
+      this.wakeAt(until)
+      return
+    }
+    const readyAt = Math.max(this.store.data.nextDownloadAt, job.retryAt || 0)
+    if (readyAt > Date.now()) { this.wakeAt(readyAt); return }
+    clearTimeout(this.wakeTimer)
+    this.wakeTimer = null
     let finished
-    const current = { id: job.id, child: null, cancelled: false, committing: false, controller: new AbortController(), done: new Promise(resolve => { finished = resolve }) }
+    const current = { id: job.id, child: null, cancelled: false, committing: false, recovery: this.store.data.queueRecovery, controller: new AbortController(), done: new Promise(resolve => { finished = resolve }) }
     this.current = current
     job.status = 'preparing'
     job.error = ''
@@ -182,6 +277,7 @@ class Downloads {
       this.notify()
       await runProcess(toolPaths.ytdlp.path, args, {
         signal: current.controller.signal,
+        onErrorLine: line => this.stopOnServiceLimit(line, current),
         onSpawn: child => {
           current.child = child
           if (current.cancelled || this.stopping) void stopProcess(child)
@@ -228,16 +324,22 @@ class Downloads {
       job.status = 'completed'
       job.progress = 100
       job.completedAt = Date.now()
+      job.retryAt = 0
+      if (this.store.data.queueRecovery === current.recovery) this.store.data.queueRecovery = { until: 0, reason: '', message: '', rateLimitCount: 0 }
     } catch (error) {
+      error = current.serviceError || error
       invalidOutput = error.code === 'INVALID_MEDIA' || /Invalid data|moov atom|Invalid frame|Error.*(?:decod|muxing|encoding|processing)|Unsupported codec/i.test(error.message)
       if (!current.cancelled && !this.stopping) {
-        job.status = 'failed'
-        job.error = friendlyError(error)
-        if (!this.tools.ready()) this.store.data.queuePaused = true
+        if (!this.tools.ready() || !this.recover(error, job)) {
+          job.status = 'failed'
+          job.error = friendlyError(error)
+          if (!this.tools.ready()) this.store.data.queuePaused = true
+        }
       }
     } finally {
       job.speed = 0
       job.eta = null
+      this.store.data.nextDownloadAt = Date.now() + 5000 + Math.floor(Math.random() * 5001)
       if (this.stopping && activeStatuses.includes(job.status)) job.status = 'queued'
       else if (current.cancelled) job.status = 'cancelled'
       try {
@@ -246,6 +348,7 @@ class Downloads {
         this.notify()
       } finally {
         this.current = null
+        this.notify()
         finished()
         if (!this.stopping) setImmediate(() => void this.pump())
       }
@@ -263,8 +366,9 @@ class Downloads {
       const current = this.current
       current.controller.abort()
       await current.done
-    } else if (job.status === 'queued') {
+    } else if (this.pending(job)) {
       job.status = 'cancelled'
+      job.retryAt = 0
       this.store.save()
       this.notify()
     }
@@ -277,6 +381,7 @@ class Downloads {
     job.status = 'queued'
     job.progress = 0
     job.error = ''
+    job.retryAt = 0
     this.store.save()
     this.notify()
     void this.pump()
@@ -284,7 +389,7 @@ class Downloads {
 
   remove(id) {
     const job = this.get(id)
-    if (this.current?.id === id || ['queued', ...activeStatuses].includes(job.status)) throw new Error('Önce indirmeyi iptal edin.')
+    if (this.current?.id === id || this.pending(job) || activeStatuses.includes(job.status)) throw new Error('Önce indirmeyi iptal edin.')
     this.store.data.jobs = this.store.data.jobs.filter(item => item.id !== id)
     this.store.save()
     this.removeWorkDirectory(this.jobWorkDirectory(id))
@@ -294,6 +399,12 @@ class Downloads {
   pause(paused) {
     if (typeof paused !== 'boolean') throw new Error('Geçersiz kuyruk ayarı.')
     this.store.data.queuePaused = paused
+    clearTimeout(this.wakeTimer)
+    this.wakeTimer = null
+    if (!paused && this.store.data.queueRecovery.until <= Date.now()) {
+      this.store.data.queueRecovery = { until: 0, reason: '', message: '', rateLimitCount: 0 }
+      for (const job of this.store.data.jobs) if (job.status === 'waiting') job.retryAt = 0
+    }
     this.store.save()
     this.notify()
     if (!paused) void this.pump()
@@ -374,6 +485,8 @@ class Downloads {
 
   async shutdown() {
     this.stopping = true
+    clearTimeout(this.wakeTimer)
+    this.wakeTimer = null
     this.analysisController?.abort()
     this.verificationController.abort()
     const current = this.current

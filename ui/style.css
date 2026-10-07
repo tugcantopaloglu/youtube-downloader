@@ -106,6 +106,15 @@ select{background:#242b27;border:1px solid #3c4940;border-radius:7px;padding:10p
 .tools-banner p{margin:6px 0 0;font-size:11px;color:#93a598;line-height:1.6;white-space:pre-line}
 .tools-banner.warning{background:#3b2d2566;border-color:#5d4839}
 .tools-banner.warning p{color:#cab29d}
+.recovery-banner{display:flex;align-items:center;gap:13px;padding:16px;border:1px solid #465446;border-radius:9px;background:#27362966;margin-bottom:20px}
+.recovery-banner>div:first-of-type{flex:1;min-width:0}
+.recovery-banner>.icon{color:var(--accent)}
+.recovery-banner strong{font-size:12px;font-weight:500}
+.recovery-banner p{font-size:11px;line-height:1.65;color:#b0bdb1;margin:6px 0 0}
+.recovery-banner small{display:block;font-size:11px;color:var(--accent);margin-top:8px;font-variant-numeric:tabular-nums}
+.recovery-banner.attention{background:#3b2d2566;border-color:#5d4839}
+.queue-wait-note{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;margin:0 0 18px;font-variant-numeric:tabular-nums}
+.queue-wait-note>.icon{width:15px;height:15px}
 .spinner{width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;flex-shrink:0}
 .tools-banner .spinner{color:#b4ccb9}
 .preview-section{background:#1a201c;border:1px solid #3b4c40;border-radius:12px;padding:22px 24px;margin-top:24px;scroll-margin-top:20px}
@@ -153,6 +162,7 @@ select{background:#242b27;border:1px solid #3c4940;border-radius:7px;padding:10p
 .status-label{font-size:9px;white-space:nowrap;padding:4px 7px;background:#293b2f;color:#a0c7ac;border-radius:4px}
 .status-label.failed{color:#deb2a8;background:#46312b}
 .status-label.cancelled{color:#999f9a;background:#2b302c}
+.status-label.waiting{color:#dbc79f;background:#40392b}
 .status-label.downloading,.status-label.processing{color:#b9edc9;background:#2c4735}
 .queue-detail{font-size:10px;color:#8da393;margin:8px 0 0;line-height:1.7;overflow-wrap:anywhere;white-space:pre-line}
 .queue-item.failed .queue-detail{color:#d5a99e}

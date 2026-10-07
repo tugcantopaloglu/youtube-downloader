@@ -78,7 +78,8 @@ function bytes(size) {
 
 const completed = () => state.jobs.filter(job => job.status === 'completed' && job.media?.sha256)
 const activeStatuses = ['preparing', 'downloading', 'processing', 'verifying', 'saving', 'cancelling']
-const unfinished = () => state.jobs.filter(job => job.status === 'queued' || activeStatuses.includes(job.status))
+const pending = job => ['queued', 'waiting'].includes(job.status)
+const unfinished = () => state.jobs.filter(job => pending(job) || activeStatuses.includes(job.status))
 const qualityLabel = job => job.mode === 'audio' ? `MP3 · ${job.media?.audioBitrate ? Math.round(job.media.audioBitrate / 1000) : job.audioQuality} kbps` : `MP4 · ${job.media?.height ? `${job.media.height}p` : job.quality === 'best' ? 'En iyi kalite' : `${job.quality}p'ye kadar`}`
 const date = timestamp => new Date(timestamp).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
 
@@ -101,9 +102,30 @@ function toolsBanner() {
   return `<div class="tools-banner ${tools.error ? 'warning' : ''}"><span class="${tools.busy ? 'spinner' : 'banner-icon'}">${tools.busy ? '' : icon('refresh')}</span><div><strong>${esc(tools.message)}</strong><p>${tools.error ? esc(tools.error) : 'İlk açılışta gerekli araçlar otomatik indirilir. Ayrı bir kurulum yapmana gerek yok.'}</p>${tools.progress !== null ? `<div class="progress-track"><div style="--progress:${tools.progress}%"></div></div>` : ''}</div>${tools.error && !tools.busy ? '<button class="button small" data-action="tools">Yeniden dene</button>' : ''}</div>`
 }
 
+function waitTime(timestamp) {
+  return duration(Math.max(1, Math.ceil((timestamp - Date.now()) / 1000)))
+}
+
+function recoveryBanner() {
+  const recovery = state.queueRecovery || {}
+  if (recovery.reason && (recovery.until > Date.now() || state.queuePaused)) {
+    const titles = { 'rate-limit': 'YouTube bekleme süresi', offline: 'İnternet bağlantısı bekleniyor', connection: 'Bağlantı bekleniyor', forbidden: 'İndirme bağlantısı yenilenecek', authentication: 'YouTube doğrulaması gerekli', storage: 'Dosya kaydedilemiyor' }
+    const timed = recovery.until > Date.now()
+    return `<div class="recovery-banner ${timed ? '' : 'attention'}">${icon(timed ? 'clock' : 'pause')}<div><strong>${titles[recovery.reason] || 'Kuyruk bekletiliyor'}</strong><p>${esc(recovery.message)}</p>${timed ? `<small>${state.queuePaused ? 'Kuyruk bekletiliyor. En erken' : 'Otomatik devam:'} <span data-retry-at="${recovery.until}">${waitTime(recovery.until)}</span>${state.queuePaused ? ' sonra devam edilebilir.' : ' sonra'}</small>` : ''}</div>${!timed ? `<div class="inline-actions">${recovery.reason === 'authentication' ? '<button class="button small" data-page="settings">Ayarları aç</button>' : ''}<button class="button small" data-action="resume">Devam et</button></div>` : ''}</div>`
+  }
+  if (!state.queuePaused && unfinished().length && !state.jobs.some(job => activeStatuses.includes(job.status)) && recovery.nextDownloadAt > Date.now()) return `<p class="queue-wait-note">${icon('clock')}Sıradaki indirme <span data-retry-at="${recovery.nextDownloadAt}">${waitTime(recovery.nextDownloadAt)}</span> sonra başlayacak.</p>`
+  return ''
+}
+
+function renderRecovery() {
+  const element = document.querySelector('#recovery-banner')
+  if (element) element.innerHTML = recoveryBanner()
+}
+
 function downloadPage() {
   return `${header('İndir')}
     <div id="tools-banner">${toolsBanner()}</div>
+    <div id="recovery-banner">${recoveryBanner()}</div>
     <section class="download-panel">
       <label class="field-label" for="url">YouTube bağlantısı</label>
       <form id="link-form"><div class="url-field">${icon('link')}<input type="url" id="url" value="${esc(downloadURL)}" placeholder="Video veya playlist bağlantısını yapıştırın" autocomplete="off" required aria-label="YouTube bağlantısı"><button type="submit" id="analyze-button" class="button primary">${icon('download')}İndir</button></div></form>
@@ -146,15 +168,15 @@ function renderRecent() {
 }
 
 function queuePage() {
-  return `${header('İndirme kuyruğu', '', `<button class="button" data-action="pause" id="pause-button"></button>`)}<div id="tools-banner">${toolsBanner()}</div><div id="queue-summary" class="queue-summary"></div><div id="queue-content"></div>`
+  return `${header('İndirme kuyruğu', '', `<button class="button" data-action="pause" id="pause-button"></button>`)}<div id="tools-banner">${toolsBanner()}</div><div id="recovery-banner">${recoveryBanner()}</div><div id="queue-summary" class="queue-summary"></div><div id="queue-content"></div>`
 }
 
 function queueRow(job) {
-  const labels = { queued: state.queuePaused ? 'Bekletiliyor' : 'Sırada', preparing: 'Hazırlanıyor', downloading: 'İndiriliyor', processing: 'Dosya hazırlanıyor', verifying: 'Dosya doğrulanıyor', saving: 'Kaydediliyor', cancelling: 'İptal ediliyor', completed: 'Tamamlandı', failed: 'İndirilemedi', cancelled: 'İptal edildi' }
+  const labels = { queued: state.queuePaused ? 'Bekletiliyor' : 'Sırada', waiting: state.queuePaused ? 'Bekletiliyor' : 'Yeniden denenecek', preparing: 'Hazırlanıyor', downloading: 'İndiriliyor', processing: 'Dosya hazırlanıyor', verifying: 'Dosya doğrulanıyor', saving: 'Kaydediliyor', cancelling: 'İptal ediliyor', completed: 'Tamamlandı', failed: 'İndirilemedi', cancelled: 'İptal edildi' }
   const active = activeStatuses.includes(job.status)
   const stageDetail = { preparing: 'İndirme araçları hazırlanıyor', processing: 'Ses ve video işleniyor', verifying: 'Dosya biçimi, ses ve görüntü paketleri kontrol ediliyor', saving: 'Doğrulanan dosya seçilen klasöre kaydediliyor', cancelling: 'Devam eden işlem durduruluyor' }
   const detail = job.error || (active ? `${stageDetail[job.status] || `${Math.round(job.progress)}%`}${job.speed ? ` · ${bytes(job.speed)}/sn` : ''}${job.eta ? ` · ${duration(job.eta)} kaldı` : ''}` : qualityLabel(job))
-  return `<article class="queue-item ${job.status}">${image(job)}<div class="queue-item-body"><div class="queue-title"><strong title="${esc(job.title)}">${esc(job.title)}</strong><span class="status-label ${job.status}">${labels[job.status]}</span></div><p class="queue-detail">${esc(detail)}</p>${active ? `<div class="progress-track ${job.status !== 'downloading' ? 'indeterminate' : ''}"><div style="--progress:${Math.max(0, Math.min(100, job.progress))}%"></div></div>` : ''}</div><div class="queue-actions">${job.status === 'completed' ? `<button class="icon-button" data-action="open" data-id="${job.id}" title="Dosyayı aç" aria-label="Dosyayı aç">${icon('play')}</button><button class="icon-button" data-action="reveal" data-id="${job.id}" title="Klasörde göster" aria-label="Klasörde göster">${icon('folder')}</button>` : ['failed', 'cancelled'].includes(job.status) ? `<button class="button small" data-action="retry" data-id="${job.id}">${icon('refresh')}Yeniden dene</button>` : `<button class="icon-button" data-action="cancel" data-id="${job.id}" title="İndirmeyi iptal et" aria-label="İndirmeyi iptal et" ${['saving', 'cancelling'].includes(job.status) ? 'disabled' : ''}>${icon('close')}</button>`}${!active && job.status !== 'queued' ? `<button class="icon-button" data-action="remove" data-id="${job.id}" title="Kaydı kaldır" aria-label="Kaydı kaldır">${icon('trash')}</button>` : ''}</div></article>`
+  return `<article class="queue-item ${job.status}">${image(job)}<div class="queue-item-body"><div class="queue-title"><strong title="${esc(job.title)}">${esc(job.title)}</strong><span class="status-label ${job.status}">${labels[job.status]}</span></div><p class="queue-detail">${esc(detail)}${job.status === 'waiting' && job.retryAt > Date.now() && !state.queuePaused ? ` · <span data-retry-at="${job.retryAt}">${waitTime(job.retryAt)}</span> sonra yeniden denenecek` : ''}</p>${active ? `<div class="progress-track ${job.status !== 'downloading' ? 'indeterminate' : ''}"><div style="--progress:${Math.max(0, Math.min(100, job.progress))}%"></div></div>` : ''}</div><div class="queue-actions">${job.status === 'completed' ? `<button class="icon-button" data-action="open" data-id="${job.id}" title="Dosyayı aç" aria-label="Dosyayı aç">${icon('play')}</button><button class="icon-button" data-action="reveal" data-id="${job.id}" title="Klasörde göster" aria-label="Klasörde göster">${icon('folder')}</button>` : ['failed', 'cancelled'].includes(job.status) ? `<button class="button small" data-action="retry" data-id="${job.id}">${icon('refresh')}Yeniden dene</button>` : `<button class="icon-button" data-action="cancel" data-id="${job.id}" title="İndirmeyi iptal et" aria-label="İndirmeyi iptal et" ${['saving', 'cancelling'].includes(job.status) ? 'disabled' : ''}>${icon('close')}</button>`}${!active && !pending(job) ? `<button class="icon-button" data-action="remove" data-id="${job.id}" title="Kaydı kaldır" aria-label="Kaydı kaldır">${icon('trash')}</button>` : ''}</div></article>`
 }
 
 function renderQueue() {
@@ -164,8 +186,8 @@ function renderQueue() {
   document.querySelector('#queue-summary').innerHTML = `<span><strong>${unfinished().length}</strong> bekleyen / devam eden</span><span><strong>${completed().length}</strong> tamamlanan</span><span><strong>${jobs.filter(job => job.status === 'failed').length}</strong> başarısız</span>`
   const pause = document.querySelector('#pause-button')
   pause.innerHTML = `${icon(state.queuePaused ? 'play' : 'pause')}${state.queuePaused ? 'Kuyruğu devam ettir' : 'Kuyruğu beklet'}`
-  const priority = job => activeStatuses.includes(job.status) ? 2 : job.status === 'queued' ? 1 : 0
-  const ordered = jobs.map((job, index) => ({ job, index })).sort((a, b) => priority(b.job) - priority(a.job) || (a.job.status === 'queued' ? b.index - a.index : a.index - b.index)).map(item => item.job)
+  const priority = job => activeStatuses.includes(job.status) ? 2 : pending(job) ? 1 : 0
+  const ordered = jobs.map((job, index) => ({ job, index })).sort((a, b) => priority(b.job) - priority(a.job) || (pending(a.job) ? b.index - a.index : a.index - b.index)).map(item => item.job)
   element.innerHTML = jobs.length ? `<div class="queue-list">${ordered.slice(0, queueLimit).map(queueRow).join('')}</div>${jobs.length > queueLimit ? `<div class="load-more"><span>${Math.min(queueLimit, jobs.length)} / ${jobs.length} kayıt</span><button class="button small" data-action="more-queue">Daha fazlasını göster</button></div>` : ''}${state.queuePaused ? '<p class="quiet-note">Devam eden indirme bitirilir; sıradaki indirmeler bekletilir.</p>' : ''}` : empty('Kuyruğun boş.', 'Yeni indirme ekranından bir bağlantı ekleyerek başlayabilirsin.', 'queue')
 }
 
@@ -183,7 +205,7 @@ function renderLibrary() {
 
 function settingsPage() {
   return `${header('Ayarlar')}
-    <section class="settings-panel"><div class="settings-heading">${icon('folder')}<h2>İndirme tercihleri</h2></div><div class="settings-row"><div><strong>İndirme klasörü</strong><p id="settings-directory">${esc(state.settings.downloadDirectory)}</p></div><button class="button small" data-action="directory">Klasör seç</button></div><div class="settings-row"><div><strong>YouTube oturum dosyası</strong><p id="cookies-path">${state.settings.cookiesFile ? esc(state.settings.cookiesFile) : 'YouTube giriş isterse Netscape biçiminde cookies.txt seçebilirsin.'}</p></div><div class="inline-actions"><button class="button small" data-action="cookies">Dosya seç</button><button class="icon-button" data-action="clear-cookies" aria-label="Oturum dosyasını kaldır" title="Oturum dosyasını kaldır">${icon('close')}</button></div></div></section>
+    <section class="settings-panel"><div class="settings-heading">${icon('folder')}<h2>İndirme tercihleri</h2></div><div class="settings-row"><div><strong>İndirme klasörü</strong><p id="settings-directory">${esc(state.settings.downloadDirectory)}</p></div><button class="button small" data-action="directory">Klasör seç</button></div><div class="settings-row"><div><strong>YouTube oturum dosyası</strong><p id="cookies-path">${state.settings.cookiesFile ? esc(state.settings.cookiesFile) : 'YouTube giriş isterse Netscape biçiminde cookies.txt seçebilirsin.'}</p></div><div class="inline-actions"><button class="button small" data-action="cookies">Dosya seç</button><button class="icon-button" data-action="clear-cookies" aria-label="Oturum dosyasını kaldır" title="Oturum dosyasını kaldır">${icon('close')}</button></div></div><div class="settings-row"><div><strong>İndirme sırasında uykuya geçme</strong><p>Kuyruk çalışırken bilgisayar açık kalır. Ekran kapanabilir.</p></div><label class="switch"><input type="checkbox" id="keep-awake" ${state.settings.keepAwake ? 'checked' : ''} aria-label="İndirme sırasında uykuya geçme"><span></span></label></div></section>
     <section class="settings-panel"><div class="settings-heading">${icon('refresh')}<h2>İndirme araçları</h2><span class="subtle-pill">Otomatik kurulum</span></div><div class="settings-row"><div><strong>Araçları otomatik güncelle</strong><p>yt-dlp günlük; FFmpeg ve Deno haftalık kontrol edilir.</p></div><label class="switch"><input type="checkbox" id="auto-tools" ${state.settings.autoUpdateTools ? 'checked' : ''} aria-label="Araçları otomatik güncelle"><span></span></label></div><div id="tool-versions"></div><div class="settings-bottom"><span id="tools-message"></span><button class="button small" data-action="tools" id="tools-button">${icon('refresh')}Şimdi kontrol et</button></div></section>
     <section class="settings-panel"><div class="settings-heading">${icon('download')}<h2>Uygulama güncellemeleri</h2><span class="version-tag">v${esc(state.version)}</span></div><div class="settings-row"><div><strong>Uygulamayı otomatik güncelle</strong><p>Yeni sürüm arka planda indirilir, uygulama kapanınca yüklenir.</p></div><label class="switch"><input type="checkbox" id="auto-app" ${state.settings.autoUpdateApp ? 'checked' : ''} aria-label="Uygulamayı otomatik güncelle"><span></span></label></div><form id="repository-form" class="repository-form"><label for="repository">GitHub güncelleme deposu</label><div class="repository-field"><span>github.com /</span><input id="repository" value="${esc(state.settings.githubRepository)}" required aria-label="GitHub güncelleme deposu"><button class="button small" type="submit">Kaydet</button></div><p>Herkese açık depoda yayınlanan Windows kurulum sürümleri kullanılır.</p></form><div class="settings-bottom"><span id="update-message"></span><div class="inline-actions"><button class="button small" id="update-button" data-action="update">${icon('refresh')}Şimdi kontrol et</button><button class="button small" id="download-update" data-action="download-update" hidden>Güncellemeyi indir</button><button class="button primary small" id="install-update" data-action="install-update" hidden>Yeniden başlat ve yükle</button></div></div></section>`
 }
@@ -200,6 +222,7 @@ function renderSettingsStatus() {
   document.querySelector('#download-update').hidden = state.update.status !== 'available'
   document.querySelector('#install-update').disabled = unfinished().length > 0 || state.analyzing || state.tools.busy
   document.querySelector('#settings-directory').textContent = state.settings.downloadDirectory
+  document.querySelector('#keep-awake').checked = state.settings.keepAwake
   document.querySelector('#cookies-path').textContent = state.settings.cookiesFile || 'YouTube giriş isterse Netscape biçiminde cookies.txt seçebilirsin.'
 }
 
@@ -234,7 +257,8 @@ function renderPage() {
 function updateAnalyzeButton() {
   const button = document.querySelector('#analyze-button')
   if (button) {
-    button.disabled = analyzing || state.analyzing
+    const recovery = state.queueRecovery || {}
+    button.disabled = analyzing || state.analyzing || recovery.until > Date.now() || (state.queuePaused && Boolean(recovery.reason))
     button.innerHTML = analyzing || state.analyzing ? '<span class="spinner"></span>Hazırlanıyor' : `${icon('download')}${document.querySelector('#playlist')?.checked ? 'Videoları seç' : 'İndir'}`
     document.querySelectorAll('#url, #playlist, #quality, #audio-quality, [data-format], [data-action="directory"]').forEach(control => { control.disabled = analyzing || state.analyzing })
   }
@@ -259,6 +283,7 @@ function updateState(next) {
   document.querySelector('#app-version').textContent = `DownTube ${state.version}`
   const banner = document.querySelector('#tools-banner')
   if (banner) banner.innerHTML = toolsBanner()
+  renderRecovery()
   const directory = document.querySelector('#download-directory')
   if (directory) { directory.textContent = state.settings.downloadDirectory; directory.title = state.settings.downloadDirectory }
   updateAnalyzeButton()
@@ -298,6 +323,7 @@ document.addEventListener('click', event => {
       case 'retry': await api.retry(id); break
       case 'remove': await api.remove(id); break
       case 'pause': await api.pause(!state.queuePaused); break
+      case 'resume': await api.pause(false); break
       case 'more-queue': queueLimit += 50; renderQueue(); break
       case 'more-library': libraryLimit += 60; renderLibrary(); break
       case 'tools': {
@@ -362,8 +388,8 @@ document.addEventListener('change', event => {
     selection = new Set(input.checked ? preview.entries.map(entry => entry.videoId) : [])
     document.querySelectorAll('[data-select]').forEach(checkbox => { checkbox.checked = input.checked })
     updateSelection()
-  } else if (input.id === 'auto-tools' || input.id === 'auto-app') {
-    const key = input.id === 'auto-tools' ? 'autoUpdateTools' : 'autoUpdateApp'
+  } else if (['auto-tools', 'auto-app', 'keep-awake'].includes(input.id)) {
+    const key = { 'auto-tools': 'autoUpdateTools', 'auto-app': 'autoUpdateApp', 'keep-awake': 'keepAwake' }[input.id]
     void action(async () => { try { await api.saveSettings({ [key]: input.checked }) } catch (error) { input.checked = state.settings[key]; throw error } })
   } else if (input.id === 'quality' || input.id === 'audio-quality') {
     void action(() => api.saveSettings({ [input.id === 'quality' ? 'quality' : 'audioQuality']: input.value }))
@@ -389,7 +415,13 @@ document.addEventListener('input', event => {
 })
 
 hydrateIcons()
+setInterval(() => {
+  if (!state) return
+  document.querySelectorAll('[data-retry-at]').forEach(element => { element.textContent = waitTime(Number(element.dataset.retryAt)) })
+  updateAnalyzeButton()
+}, 1000)
 if (api) {
+  window.addEventListener('online', () => { void action(() => api.networkRestored()) })
   api.onState(updateState)
   void action(async () => { state = await api.state(); format = state.settings.mode; renderPage(); updateState(state) })
 } else {

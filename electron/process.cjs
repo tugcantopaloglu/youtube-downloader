@@ -28,10 +28,12 @@ function runProcess(executable, args, options = {}) {
   })
   stderrReader.on('line', line => {
     stderr = `${stderr}${line}\n`.slice(-12000)
+    options.onErrorLine?.(line)
     options.onLine?.(line)
   })
   const timer = options.timeout ? setTimeout(() => {
     failure = new Error('İşlem zaman aşımına uğradı. Bağlantınızı kontrol edip yeniden deneyin.')
+    failure.code = 'ETIMEDOUT'
     stopProcess(child)
   }, options.timeout) : null
   return new Promise((resolve, reject) => {

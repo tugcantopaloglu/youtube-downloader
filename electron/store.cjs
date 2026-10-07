@@ -12,6 +12,7 @@ class Store {
       audioQuality: '192',
       autoUpdateTools: true,
       autoUpdateApp: true,
+      keepAwake: true,
       githubRepository: 'tugcantopaloglu/youtube-downloader',
       cookiesFile: ''
     }
@@ -34,7 +35,9 @@ class Store {
       jobs: saved?.jobs || [],
       tools: saved?.tools || {},
       toolsCheckedAt: saved?.toolsCheckedAt || 0,
-      queuePaused: saved?.queuePaused ?? false
+      queuePaused: saved?.queuePaused ?? false,
+      nextDownloadAt: saved?.nextDownloadAt || 0,
+      queueRecovery: { until: 0, reason: '', message: '', rateLimitCount: 0, ...saved?.queueRecovery }
     }
     for (const job of this.data.jobs) {
       if (['downloading', 'processing', 'preparing', 'verifying', 'saving'].includes(job.status)) {

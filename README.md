@@ -4,7 +4,7 @@ Windows 10/11 x64 için Türkçe YouTube video, playlist ve MP3 indirme uygulama
 
 ## Kullanım
 
-GitHub Releases sayfasından `DownTube-Setup-1.0.2.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
+GitHub Releases sayfasından `DownTube-Setup-1.0.3.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
 
 İlk açılışta gerekli araçlar GitHub üzerinden indirilir. İlk hazırlık internet bağlantısı gerektirir. Sonraki açılışlarda hazır araçlar kullanılır; güncelleme kontrolü başarısız olursa mevcut araçlarla çalışmaya devam edilir.
 
@@ -14,6 +14,18 @@ GitHub Releases sayfasından `DownTube-Setup-1.0.2.exe` dosyasını indirip aç�
 4. Playlistte `Videoları seç` düğmesine basıp istediğiniz videoları işaretleyin ve indirin. İlerleme Kuyruk ekranında, tamamlanan dosyalar küçük resimleriyle İndirilenler ekranında görünür.
 
 Kuyruk sırayla çalışır. Bekletme sıradaki indirmeleri durdurur; devam eden dosya tamamlanır. İptal edilen veya başarısız indirmeler yeniden denenebilir. Geçici alandaki `.part` dosyaları korunur ve yeniden indirmede kullanılabilir. Uygulama kapanınca tamamlanmamış işler sonraki açılışta tekrar kuyruğa alınır. Aynı video, biçim, kalite ve klasör için halen doğrulanmış bir dosya veya kuyruk kaydı varsa tekrar eklenmez.
+
+## Uzun indirme kuyrukları
+
+Videolar tek tek indirilir; iki iş arasında 5–10 saniye beklenir. Metadata istekleri arasında 0,75 saniye beklenir ve aynı bağlantının önizlemesi 10 dakika boyunca yeniden kullanılabilir. HTTP, parça ve metadata hatalarında yt-dlp sınırlı sayıda, giderek artan sürelerle yeniden dener. Eksik parçalar atlanarak tamamlanmış dosya üretilmez.
+
+Geçici bağlantı hatalarında kuyruk 30 saniye, 2 dakika ve 5 dakika sonra aynı işi yeniden dener. YouTube `429` veya geçici istek sınırı bildirirse devam eden istekler durdurulur; kuyruk 15, 30 ve 60 dakika bekledikten sonra otomatik devam eder. Bekleme boyunca kalan videolara istek gönderilmez. Bu süreler uygulamanın toparlanma politikasıdır; YouTube tarafından garanti edilen sınırlar değildir. Tekrarlanan hatalarda otomatik denemeler durur ve kullanıcıdan müdahale istenir.
+
+`403` yanıtında yeni bir indirme bağlantısı alınarak bir kez yeniden denenir; devam ederse kuyruk bekletilir. Bot/oturum doğrulaması, dolu disk veya erişim sorunu otomatik döngüye girmez. Sorun giderildikten sonra `Devam et` aynı işi tekrar kuyruğa alır. Silinmiş, özel veya erişilemeyen bir video diğer indirmeleri durdurmadan atlanır.
+
+Bilgisayar çevrimdışı olduğunu bildirirse YouTube'a istek gönderilmeden bağlantı beklenir. Bağlantı geri geldiğinde kuyruk otomatik devam eder; manuel bekletme ve YouTube bekleme süresi korunur. Kuyruk, indirme parçaları ve bekleme bitişi diske kaydedilir; uygulama yeniden açıldığında devam eder. Uygulamanın açık olması gerekir.
+
+Varsayılan olarak aktif kuyruk sırasında Windows'un otomatik uyuması önlenir; ekran kapanabilir. Bu tercih Ayarlar'dan kapatılabilir. Kuyruk bittiğinde veya bekletildiğinde uyku engeli kaldırılır. YouTube doğrulama veya erişim kısıtlamaları nedeniyle kesintisiz indirme garanti edilemez.
 
 ## Dosya doğrulaması
 
@@ -70,7 +82,7 @@ Kurulum dosyası oluşturma:
 npm run dist
 ```
 
-Çıktı `release/DownTube-Setup-1.0.2.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
+Çıktı `release/DownTube-Setup-1.0.3.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
 
 ## GitHub üzerinden sürüm yayınlama
 
