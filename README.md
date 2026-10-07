@@ -1,10 +1,10 @@
 # DownTube
 
-Windows 10/11 x64 için Türkçe YouTube video, playlist ve MP3 indirme uygulaması. Electron arayüzü, yt-dlp indirme motoru, FFmpeg/FFprobe ve Deno kullanır.
+Windows 10/11 x64 için Türkçe YouTube video, playlist ve MP3 indirme uygulaması. Electron arayüzü, yt-dlp indirme motoru, FFmpeg/FFprobe ve Deno kullanır. Arayüz Graphite Mono temasını kullanır: grafit gri yüzeyler, beyaz vurgular ve bağlantı, dosya yolu, sürüm ve sayaçlarda monospace yazı.
 
 ## Kullanım
 
-GitHub Releases sayfasından `DownTube-Setup-1.0.5.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
+GitHub Releases sayfasından `DownTube-Setup-1.0.6.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
 
 İlk açılışta gerekli araçlar GitHub üzerinden indirilir. İlk hazırlık internet bağlantısı gerektirir. Sonraki açılışlarda hazır araçlar kullanılır; güncelleme kontrolü başarısız olursa mevcut araçlarla çalışmaya devam edilir.
 
@@ -82,7 +82,7 @@ Kurulum dosyası oluşturma:
 npm run dist
 ```
 
-Çıktı `release/DownTube-Setup-1.0.5.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
+Çıktı `release/DownTube-Setup-1.0.6.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
 
 ## GitHub üzerinden sürüm yayınlama
 

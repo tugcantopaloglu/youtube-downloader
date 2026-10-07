@@ -144,7 +144,7 @@ function registerHandlers() {
 async function createWindow() {
   window = new BrowserWindow({
     width: 1120, height: 780, minWidth: 880, minHeight: 620, show: false, frame: false,
-    backgroundColor: '#111315', title: 'DownTube', icon: path.join(__dirname, '../assets/icon.ico'),
+    backgroundColor: '#101010', title: 'DownTube', icon: path.join(__dirname, '../assets/icon.ico'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true }
   })
   window.setMenu(null)
