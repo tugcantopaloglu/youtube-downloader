@@ -2,8 +2,8 @@ const { autoUpdater } = require('electron-updater')
 const { validateExecutable } = require('./executable.cjs')
 
 function parseRepository(value) {
-  const repository = String(value || '').trim().replace(/^https:\/\/github\.com\//i, '').replace(/\.git$/, '').replace(/\/$/, '')
-  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})\/[a-zA-Z0-9_.-]{1,100}$/.test(repository)) throw new Error('GitHub deposunu kullanıcı/depo biçiminde girin.')
+  const repository = String(value || '').trim().replace(/^https:\/\/github\.com\//i, '').replace(/\/+$/, '').replace(/\.git$/, '')
+  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})\/[a-zA-Z0-9_.-]{1,100}$/.test(repository) || ['.', '..'].includes(repository.split('/')[1])) throw new Error('GitHub deposunu kullanıcı/depo biçiminde girin.')
   return repository
 }
 
@@ -47,8 +47,10 @@ class AppUpdater {
 
   applyPreferences() {
     this.engine.autoInstallOnAppQuit = this.store.data.settings.autoUpdateApp && this.state.status !== 'error'
+    if (this.state.status === 'downloaded' && this.engine.autoInstallOnAppQuit) this.engine.addQuitHandler()
     if (this.state.status === 'downloaded') this.set({ message: this.store.data.settings.autoUpdateApp ? 'Yeni sürüm hazır. Uygulamayı kapattığınızda yüklenir.' : 'Yeni sürüm hazır. Yüklemek için yeniden başlat ve yükle düğmesini kullanın.' })
     else if (this.state.status === 'idle' && !this.store.data.settings.autoUpdateApp) this.set({ message: 'Otomatik güncelleme kapalı. İsterseniz şimdi kontrol edebilirsiniz.' })
+    if (this.app.isPackaged && this.store.data.settings.autoUpdateApp && this.state.status === 'available' && !this.pending) void this.download()
   }
 
   async check(manual = false) {
@@ -85,7 +87,7 @@ class AppUpdater {
 
   repositoryChanged() {
     if (this.pending || this.state.status === 'downloaded') throw new Error('Güncelleme işlemi tamamlandıktan ve uygulama yeniden açıldıktan sonra depo değiştirilebilir.')
-    this.set({ status: 'idle', message: 'Yeni güncelleme kaynağı kaydedildi', version: '', progress: 0 })
+    this.set({ status: this.app.isPackaged ? 'idle' : 'development', message: this.app.isPackaged ? 'Yeni güncelleme kaynağı kaydedildi' : 'Güncelleme deposu kaydedildi. Uygulama güncellemesi kurulu sürümde çalışır.', version: '', progress: 0 })
   }
 
   install() {

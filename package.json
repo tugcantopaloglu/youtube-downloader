@@ -1,12 +1,15 @@
 {
   "name": "akis-downloader",
   "productName": "Akis",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YouTube video, playlist ve MP3 indirme uygulaması",
   "author": "Tuğcan Topaloğlu",
   "license": "MIT",
   "main": "electron/main.cjs",
-  "repository": { "type": "git", "url": "https://github.com/tugcantopaloglu/youtube-downloader.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tugcantopaloglu/youtube-downloader.git"
+  },
   "scripts": {
     "start": "npm run build:ui && electron .",
     "dev": "node scripts/dev.cjs",
@@ -29,10 +32,30 @@
     "appId": "com.tugcantopaloglu.akis",
     "productName": "Akis",
     "artifactName": "Akis-Setup-${version}.${ext}",
-    "directories": { "output": "release", "buildResources": "assets" },
-    "files": ["electron/**/*", "dist-ui/**/*", "assets/icon.ico", "package.json", "LICENSE", "THIRD_PARTY.md"],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "dist-ui/**/*",
+      "assets/icon.ico",
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY.md"
+    ],
     "asar": true,
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "assets/icon.ico" },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
@@ -42,8 +65,18 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Akış",
       "deleteAppDataOnUninstall": false,
-      "installerLanguages": ["tr_TR", "en_US"]
+      "installerLanguages": [
+        "tr_TR",
+        "en_US"
+      ]
     },
-    "publish": [{ "provider": "github", "owner": "tugcantopaloglu", "repo": "youtube-downloader", "releaseType": "release" }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tugcantopaloglu",
+        "repo": "youtube-downloader",
+        "releaseType": "release"
+      }
+    ]
   }
 }

@@ -177,7 +177,7 @@ function renderLibrary() {
   const element = document.querySelector('#library-content')
   if (!element) return
   const jobs = completed().filter(job => (libraryFilter === 'all' || job.mode === libraryFilter) && `${job.title} ${job.channel}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')))
-  librarySignature = `${completed().length}:${completed()[0]?.id || ''}`
+  librarySignature = `${completed().length}:${completed()[0]?.id || ''}:${state.historyChecking ? 1 : 0}`
   element.innerHTML = jobs.length ? `<div class="library-count">${jobs.length} dosya</div><div class="media-grid">${jobs.slice(0, libraryLimit).map(card).join('')}</div>${jobs.length > libraryLimit ? `<div class="load-more"><span>${Math.min(libraryLimit, jobs.length)} / ${jobs.length} dosya</span><button class="button small" data-action="more-library">Daha fazlasını göster</button></div>` : ''}` : empty(state.historyChecking ? 'İndirme geçmişin kontrol ediliyor.' : completed().length ? 'Eşleşen içerik bulunamadı.' : 'Henüz bir şey indirmedin.', state.historyChecking ? 'Doğrulanan MP4 ve MP3 dosyaları burada görünecek.' : completed().length ? 'Aramanı veya seçtiğin filtreyi değiştirebilirsin.' : 'İndirdiğin video ve MP3 dosyaları küçük resimleriyle burada görünür.', 'library')
 }
 
@@ -252,7 +252,7 @@ function updateState(next) {
   updateAnalyzeButton()
   if (page === 'download') renderRecent()
   if (page === 'queue') renderQueue()
-  if (page === 'library' && librarySignature !== `${completed().length}:${completed()[0]?.id || ''}`) renderLibrary()
+  if (page === 'library' && librarySignature !== `${completed().length}:${completed()[0]?.id || ''}:${state.historyChecking ? 1 : 0}`) renderLibrary()
   if (page === 'settings') renderSettingsStatus()
 }
 
