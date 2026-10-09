@@ -2,7 +2,7 @@
   "name": "downtube",
   "productName": "DownTube",
   "version": "1.0.6",
-  "description": "YouTube video, playlist ve MP3 indirme uygulaması",
+  "description": "YouTube video, playlist and MP3 downloader for Windows",
   "author": "Tuğcan Topaloğlu",
   "license": "MIT",
   "main": "electron/main.cjs",
@@ -15,6 +15,7 @@
     "dev": "node scripts/dev.cjs",
     "build:ui": "vite build",
     "check": "node scripts/check.cjs",
+    "test": "node --test",
     "pack": "npm run check && npm run build:ui && electron-builder --win --x64 --dir",
     "dist": "npm run check && npm run build:ui && electron-builder --win nsis --x64 --publish never",
     "release": "npm run check && npm run build:ui && electron-builder --win nsis --x64 --publish always"

@@ -13,4 +13,4 @@ for (const file of [...files('electron'), ...files('scripts'), ...files('ui'), '
   const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' })
   if (result.status !== 0) { process.stderr.write(result.stderr); process.exit(1) }
 }
-process.stdout.write('JavaScript sözdizimi kontrolü tamamlandı.\n')
+process.stdout.write('JavaScript syntax validation completed.\n')

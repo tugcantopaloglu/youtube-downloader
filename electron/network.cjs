@@ -48,12 +48,16 @@ async function downloadVerified(asset, destination, digest, onProgress) {
       callback(null, chunk)
     }
   })
+  let created = false
   try {
-    await pipeline(Readable.fromWeb(response.body), tracker, fs.createWriteStream(destination, { flags: 'wx' }))
+    const input = Readable.fromWeb(response.body)
+    const descriptor = await fs.promises.open(destination, 'wx')
+    created = true
+    await pipeline(input, tracker, descriptor.createWriteStream())
     if (hash.digest('hex') !== digest || (asset.size && received !== asset.size)) throw new Error('İndirilen dosyanın doğrulaması başarısız oldu.')
     onProgress?.(100)
   } catch (error) {
-    fs.rmSync(destination, { force: true })
+    if (created) fs.rmSync(destination, { force: true })
     throw error
   }
 }

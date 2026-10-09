@@ -1,108 +1,170 @@
 # DownTube
 
-Windows 10/11 x64 için Türkçe YouTube video, playlist ve MP3 indirme uygulaması. Electron arayüzü, yt-dlp indirme motoru, FFmpeg/FFprobe ve Deno kullanır. Arayüz Graphite Mono temasını kullanır: grafit gri yüzeyler, beyaz vurgular ve bağlantı, dosya yolu, sürüm ve sayaçlarda monospace yazı.
+DownTube is a Windows 10/11 x64 desktop app for downloading YouTube videos,
+playlists and MP3 audio. It uses Electron, yt-dlp, FFmpeg, FFprobe and Deno.
+The application interface is in Turkish. The Graphite Mono theme uses gray
+surfaces, white accents and monospace text for links, paths, versions and counters.
 
-## Kullanım
+## Installation and use
 
-GitHub Releases sayfasından `DownTube-Setup-1.0.6.exe` dosyasını indirip açın. Kurulum kullanıcı hesabına yapılır; Python, Node.js, FFmpeg veya yönetici yetkisi gerekmez. Başlat menüsünden veya masaüstündeki DownTube kısayolundan çalıştırın.
+Download the Windows installer from [GitHub Releases](https://github.com/tugcantopaloglu/youtube-downloader/releases).
+Installation is per user and does not require administrator access, Python,
+Node.js or a separate FFmpeg installation. Open DownTube from the Start menu or
+desktop shortcut.
 
-İlk açılışta gerekli araçlar GitHub üzerinden indirilir. İlk hazırlık internet bağlantısı gerektirir. Sonraki açılışlarda hazır araçlar kullanılır; güncelleme kontrolü başarısız olursa mevcut araçlarla çalışmaya devam edilir.
+The first launch downloads tools from GitHub and needs an internet connection.
+Later launches reuse installed tools. A failed update check does not prevent
+their continued use.
 
-1. Video veya playlist bağlantısını yapıştırın. Playlist bağlantıları otomatik algılanır; video bağlantısındaki playlisti dahil etmek istemiyorsanız `Playlistteki videoları seç` seçimini kaldırın.
-2. Video (MP4) veya ses (MP3) ve kaliteyi seçin.
-3. Gerekirse indirme klasörünü değiştirin ve `İndir` düğmesine basın. Tek video doğrudan kuyruğa eklenir.
-4. Playlistte `Videoları seç` düğmesine basıp istediğiniz videoları işaretleyin ve indirin. İlerleme Kuyruk ekranında, tamamlanan dosyalar küçük resimleriyle İndirilenler ekranında görünür.
+1. Paste a video or playlist URL. Playlist URLs are detected automatically.
+   Clear the playlist selection if you only want the video in a combined URL.
+2. Choose MP4 video or MP3 audio and the quality setting.
+3. Choose the output folder and start downloading. A single video enters the
+   queue immediately. For playlists, select the videos before adding them.
+4. Follow queue progress and find completed files in the download library.
 
-Kuyruk sırayla çalışır. Bekletme sıradaki indirmeleri durdurur; devam eden dosya tamamlanır. İptal edilen veya başarısız indirmeler yeniden denenebilir. Geçici alandaki `.part` dosyaları korunur ve yeniden indirmede kullanılabilir. Uygulama kapanınca tamamlanmamış işler sonraki açılışta tekrar kuyruğa alınır. Aynı video, biçim, kalite ve klasör için halen doğrulanmış bir dosya veya kuyruk kaydı varsa tekrar eklenmez.
+The queue processes one video at a time. Pausing prevents the next job from
+starting while the current file finishes. Failed or cancelled jobs can be retried.
+Partial files stay in the temporary workspace for reuse. Interrupted jobs return
+to the queue after a restart. Existing verified files and matching queued jobs
+are not added twice for the same video, format, quality and folder.
 
-## Uzun indirme kuyrukları
+## Long queues and recovery
 
-Videolar tek tek indirilir; iki iş arasında 5–10 saniye beklenir. Metadata istekleri arasında 0,75 saniye beklenir ve aynı bağlantının önizlemesi 10 dakika boyunca yeniden kullanılabilir. HTTP, parça ve metadata hatalarında yt-dlp sınırlı sayıda, giderek artan sürelerle yeniden dener. Eksik parçalar atlanarak tamamlanmış dosya üretilmez.
+The downloader waits 5 to 10 seconds between jobs and 0.75 seconds between
+metadata requests. Link previews are cached for 10 minutes. yt-dlp uses bounded
+retries; missing fragments are not silently skipped to produce a completed file.
 
-Geçici bağlantı hatalarında kuyruk 30 saniye, 2 dakika ve 5 dakika sonra aynı işi yeniden dener. YouTube `429` veya geçici istek sınırı bildirirse devam eden istekler durdurulur; kuyruk 15, 30 ve 60 dakika bekledikten sonra otomatik devam eder. Bekleme boyunca kalan videolara istek gönderilmez. Bu süreler uygulamanın toparlanma politikasıdır; YouTube tarafından garanti edilen sınırlar değildir. Tekrarlanan hatalarda otomatik denemeler durur ve kullanıcıdan müdahale istenir.
+Temporary connection failures retry after 30 seconds, 2 minutes and 5 minutes.
+YouTube HTTP 429 pauses remaining requests for 15, 30 and 60 minutes. These are
+application policies, not guaranteed YouTube limits. Exhausting the retry
+allowance requires user action.
 
-`403` yanıtında yeni bir indirme bağlantısı alınarak bir kez yeniden denenir; devam ederse kuyruk bekletilir. Bot/oturum doğrulaması, dolu disk veya erişim sorunu otomatik döngüye girmez. Sorun giderildikten sonra `Devam et` aynı işi tekrar kuyruğa alır. Silinmiş, özel veya erişilemeyen bir video diğer indirmeleri durdurmadan atlanır.
+HTTP 403 gets one retry with a refreshed URL. Authentication, disk space and
+permission failures pause the queue until resolved. Removed, private or
+unavailable videos are skipped without stopping other jobs. When authentication
+is required, choose a local Netscape-format `cookies.txt` file in Settings.
+Cookies are not added to source control or embedded in the application.
 
-Bilgisayar çevrimdışı olduğunu bildirirse YouTube'a istek gönderilmeden bağlantı beklenir. Bağlantı geri geldiğinde kuyruk otomatik devam eder; manuel bekletme ve YouTube bekleme süresi korunur. Kuyruk, indirme parçaları ve bekleme bitişi diske kaydedilir; uygulama yeniden açıldığında devam eder. Uygulamanın açık olması gerekir.
+When Windows reports an offline connection, the queue waits before sending more
+requests. It resumes while preserving manual pauses and rate-limit cooldowns.
+Queue state, partial files and cooldown deadlines persist across restarts. The
+app must remain open to download or resume jobs.
 
-Varsayılan olarak aktif kuyruk sırasında Windows'un otomatik uyuması önlenir; ekran kapanabilir. Bu tercih Ayarlar'dan kapatılabilir. Kuyruk bittiğinde veya bekletildiğinde uyku engeli kaldırılır. YouTube doğrulama veya erişim kısıtlamaları nedeniyle kesintisiz indirme garanti edilemez.
+An active queue prevents automatic system sleep by default while allowing the
+display to turn off. Settings can disable this. The blocker is released when the
+queue finishes or pauses. YouTube restrictions can still interrupt downloading.
 
-## Dosya doğrulaması
+## File verification
 
-İndirmeler uygulamanın geçici alanında hazırlanır. Hedef klasöre yalnızca doğrulanan MP3 veya MP4 kaydedilir; küçük resim, açıklama, HTML, altyazı ve indirme parçaları bu klasöre aktarılmaz.
+Files are prepared in a temporary directory. Only verified MP4 or MP3 media goes
+into the selected folder. Thumbnails, HTML, descriptions, subtitles and partial
+files are not copied there.
 
-FFprobe dosyanın tamamındaki paketleri tarar. Gerçek kapsayıcı biçimi, boş olmayan ses/görüntü akışları, süre, MP3 bit hızı ve video çözünürlük sınırı kontrol edilir. MP3 kapak görseli ses dosyasının içinde olabilir. Boş dosya, HTML/XML yanıtı, yanlış biçim veya bozuk paketler indirme hatası sayılır. Hedefe kopyalanan dosyanın SHA-256 özeti de doğrulanır; mevcut kullanıcı dosyaları üzerine yazılmaz.
+FFprobe scans packets and checks the actual container, nonempty streams,
+duration, MP3 bitrate and video resolution limit. Empty files, HTML/XML,
+incorrect formats and corrupt packets fail verification. Copies are checked
+again with SHA-256. Existing user files are not overwritten or removed when a
+download fails to create its output file.
 
-Video çözünürlüğü bir üst sınırdır. Örneğin 1080p seçildiğinde kaynak 720p ise 720p indirilir. Kuyruk tamamlanan dosyanın gerçek çözünürlüğünü gösterir. MP3 çıktısı seçilen 128, 192 veya 320 kbps ile üretilir.
+Video resolution is an upper limit: a 720p source stays 720p when 1080p is selected.
+The queue shows the actual resolution. MP3 output uses 128, 192 or 320 kbps. An
+MP3 cover image can be embedded in the file.
 
-Dosyalar açılmadan ve tekrar indirme kararı verilmeden önce kontrol edilir. İlk açılışta eski geçmiş kayıtları doğrulanır; geçersiz dosyalar başarılı indirme olarak tutulmaz. Doğrulanmış bir dosyanın içeriği sonradan değişirse yeniden indirme istenir.
+Files are checked before opening and before deciding whether another download
+is needed. Old history entries are checked at startup. Invalid or changed files
+are not kept as verified successes. Removing history does not delete media.
+Moved or deleted files produce an opening error.
 
-Geçmişten kaldırma medya dosyasını silmez. Dosya taşınmış veya silinmişse açma işleminde anlaşılır bir hata gösterilir. Playlist önizlemesi ilk 2000 kayıtla sınırlıdır; erişilemeyen ve tekrar eden kayıtlar atlanır. Canlı yayınların kayıt işlemi yayının süresine bağlıdır.
+Playlist previews contain at most 2,000 entries, excluding duplicate and
+unavailable entries. Live stream recording depends on the stream's duration.
 
-YouTube oturum doğrulaması isterse Ayarlar’dan Netscape biçiminde bir `cookies.txt` dosyası seçilebilir. Dosya yerel bilgisayarda kullanılır; kaynak koduna veya GitHub’a eklenmez.
+## Updates
 
-## Otomatik güncellemeler
+yt-dlp's nightly channel is checked daily; FFmpeg and Deno are checked weekly.
+The manual check checks all three immediately. Tool downloads are verified with
+SHA-256 from release metadata or checksum files before activation. Archives are
+extracted into temporary directories and executables are validated. Active
+downloads retain their tool versions. Old versions are removed when the app is idle.
 
-yt-dlp, projenin düzenli kullanıcılar için önerdiği nightly kanalından günlük kontrol edilir. FFmpeg ve Deno haftalık kontrol edilir. `Şimdi kontrol et` üç aracı da hemen kontrol eder. İndirilen dosyaların SHA-256 özeti GitHub sürüm bilgisindeki özetle veya projenin checksum dosyasıyla doğrulanır. Arşivler geçici klasörde açılıp çalıştırılabilir dosyalar kontrol edildikten sonra yeni sürüme geçilir. Devam eden indirmeler önceki araç sürümlerini kullanmaya devam eder.
+Application updates use `tugcantopaloglu/youtube-downloader` by default. Settings
+accepts another public `owner/repository` or GitHub repository URL. No GitHub
+token is embedded. Automatic checks run at startup and every six hours. Updates
+download in the background and can install on normal shutdown. Restart and
+install is available only when downloads, verification and tool updates are idle.
+Disabling automatic updates also disables installing an already-downloaded update
+on shutdown. Manual check, download and install controls remain available.
 
-Uygulama güncellemeleri varsayılan olarak `tugcantopaloglu/youtube-downloader` deposundan alınır. Ayarlar’da `kullanıcı/depo` veya GitHub depo adresi girilebilir. Depo herkese açık olmalıdır; erişim tokenı uygulamaya gömülmez. Otomatik uygulama güncellemesi açılışta ve altı saatte bir kontrol edilir. Yeni sürüm arka planda indirilir ve normal kapanışta yüklenir. `Yeniden başlat ve yükle` düğmesi kuyruk boşken kullanılabilir; uygulama kapanır, güncelleme kurulum ekranı açılmadan mevcut konuma yüklenir ve yeni sürüm otomatik açılır. Eski sürümlerin güncelleme çağrıları da sessiz kurulur. İlk kurulumda klasör seçme ekranı kullanılabilir. Mevcut araçlar hazırsa indirme kuyruğu güncelleme kontrolünü beklemeden başlar.
+Checksum mismatches, incorrect Windows executables, older versions and
+prereleases are rejected. Application updates work in the NSIS-installed app and
+are disabled in development. Update failures do not block available tools.
 
-Otomatik güncelleme kapalıysa `Şimdi kontrol et` yalnızca yeni sürümü bulur. İndirme için `Güncellemeyi indir`, kurulum için `Yeniden başlat ve yükle` kullanılır. Tercih kapatıldığında daha önce indirilen güncelleme kapanışta otomatik yüklenmez. Checksum’u uyuşmayan, Windows uygulaması olmayan, eski veya önizleme sürümleri kurulmaz. Devam eden indirme, dosya doğrulama veya araç güncellemesi varken yeniden başlatma engellenir.
+See [yt-dlp's dependency documentation](https://github.com/yt-dlp/yt-dlp#dependencies)
+for its runtime requirements.
 
-Uygulama güncellemesi NSIS kurulumuyla yüklenen sürümde çalışır. Geliştirme modunda devre dışıdır. Yayın bulunmaması veya internet hatası indirmeleri engellemez. Güncelleme tercihlerinin ikisi de Ayarlar’dan kapatılabilir.
+## Development and validation
 
-yt-dlp güncel bağımlılık bilgisi: https://github.com/yt-dlp/yt-dlp#dependencies
-
-## Bilgisayarda geliştirme
-
-Node.js 24 LTS ve npm gereklidir.
+Use Node.js 24 and npm on Windows:
 
 ```powershell
 npm ci
+npm run check
+npm test
+npm run build:ui
 npm start
 ```
 
-Kaynak klasöründe `Baslat.cmd` dosyasına çift tıklamak da uygulamayı açar; bağımlılıklar eksikse önce `npm ci` çalıştırılır.
+`Baslat.cmd` also starts the app and installs missing dependencies first.
+Use `npm run dev` for live interface changes.
 
-Arayüz değişikliklerinin anında görünmesi için:
-
-```powershell
-npm run dev
-```
-
-JavaScript sözdizimi kontrolü:
-
-```powershell
-npm run check
-```
-
-Kurulum dosyası oluşturma:
+Behavior tests cover download cleanup, existing-file preservation, retry limits,
+restart recovery and state backup restoration. They use temporary directories
+and mocked network responses, without downloading videos or installing updates.
+CI runs syntax checks, behavior tests, the interface build and Windows unpacked
+packaging on pushes and pull requests.
 
 ```powershell
+npm run pack
 npm run dist
 ```
 
-Çıktı `release/DownTube-Setup-1.0.6.exe` dosyasıdır. `npm run pack` kurulum yapmadan açılabilen `release/win-unpacked/DownTube.exe` klasörünü üretir. Güncellemeler için normal kurulum dosyasını kullanın.
+`pack` creates `release/win-unpacked/DownTube.exe`. `dist` creates an NSIS installer
+in `release/` without publishing it. Use the installed version to test app updates.
+`npm audit --omit=dev` checks shipped dependencies. The full audit also includes
+packaging tools. Existing development-only findings in electron-builder's proxy
+and logging dependencies require a compatible upstream update. Test packaging
+and updates before applying the suggested builder downgrade.
 
-## GitHub üzerinden sürüm yayınlama
+## Publishing a release
 
-Bu projeyi `tugcantopaloglu/youtube-downloader` deposuna gönderin. `.github/workflows/release.yml`, `v*` etiketi gönderildiğinde Windows kurulumunu oluşturup GitHub Release’e yükler. `GITHUB_TOKEN` workflow tarafından sağlanır.
+The Windows Release workflow runs for `v*` tags or an explicit manual dispatch.
+It builds and uploads the installer using its GitHub-provided token. Version tags
+must match `package.json`.
 
 ```powershell
 npm version patch
 git push origin main --follow-tags
 ```
 
-`npm version` sürümü artırır ve `v1.0.1` gibi bir etiket oluşturur. Sürüm etiketinin `package.json` sürümüyle eşleşmesi zorunludur. `npm run release` ayrıca yerel bilgisayardan `GH_TOKEN` ortam değişkeniyle kullanılabilir. Tokenı kaynak dosyasına yazmayın.
+Local publication with `npm run release` requires `GH_TOKEN`. Keep it out of
+source files. Update-compatible releases need `DownTube-Setup-<version>.exe`,
+its `.exe.blockmap` and `latest.yml` together. The workflow produces these assets.
+Change `repository` and `build.publish` in `package.json` for another publisher.
+The repository selected in Settings changes the installed app's update source.
 
-Otomatik güncelleme için Release’te `DownTube-Setup-<sürüm>.exe`, `.exe.blockmap` ve `latest.yml` birlikte bulunmalıdır. Workflow bunları üretir. Farklı bir hesap veya depo kullanılacaksa `package.json` içindeki `repository` ve `build.publish` alanlarını değiştirin. Ayarlar’dan değiştirilen depo, kurulu uygulamanın güncelleme kaynağını değiştirir.
+Installers are currently unsigned. Configure Electron Builder's `CSC_LINK` and
+`CSC_KEY_PASSWORD` secrets for signing. Windows SmartScreen can warn about
+unsigned installers.
 
-Kurulum dosyası şu anda kod imzası olmadan üretilir. Dağıtımda imzalama kullanılacaksa Electron Builder’ın `CSC_LINK` ve `CSC_KEY_PASSWORD` secret’larını yapılandırın. İmzasız dosya ilk açılışta Windows SmartScreen uyarısı gösterebilir.
+## Local data
 
-## Yerel veriler
+Settings, queue and history live in `%APPDATA%/akis-downloader/state.json`.
+The previous valid state stays in `state.json.bak`. Tools are in `tools`,
+thumbnails in `thumbnails` and partial files in `download-work`. Verified media
+goes to the selected folder.
 
-Ayarlar, kuyruk ve geçmiş `%APPDATA%/akis-downloader/state.json` içinde tutulur. Bir önceki geçerli durum `.bak` dosyasına yedeklenir. İndirme araçları `tools`, küçük resimler `thumbnails`, indirme parçaları `download-work` alt klasöründedir. Doğrulanmış MP4/MP3 dosyaları kullanıcının seçtiği klasöre kaydedilir. Araçların eski sürümleri devam eden işlemler bitene kadar saklanır; uygulama boşta kaldığında eski araç sürümleri temizlenir.
+The installation identity and data folder are retained across updates. New
+installations default to `Downloads/DownTube`; existing folder choices remain.
 
-Önceki sürümlerden güncellemede ayarları ve geçmişi korumak için kurulum kimliği ve yerel veri klasörü korunur. Yeni kurulumların varsayılan indirme klasörü `Downloads/DownTube` olur; önceden seçilmiş klasörler aynı kalır.
-
-Uygulama kodunda yorum veya otomatik test dosyaları bulunmaz. Sözdizimi kontrolü, paketleme ve elle kullanım doğrulaması için komutlar sağlanır. Üçüncü taraf lisansları için `THIRD_PARTY.md` dosyasına bakın.
+The application is MIT licensed. See [LICENSE](LICENSE) and
+[THIRD_PARTY.md](THIRD_PARTY.md) for application and third-party terms.

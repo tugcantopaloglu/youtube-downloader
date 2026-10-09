@@ -1,0 +1,32 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs/promises')
+const os = require('node:os')
+const path = require('node:path')
+const test = require('node:test')
+const { Store } = require('../electron/store.cjs')
+
+test('queue state recovers interrupted jobs and keeps user settings', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'downtube-store-'))
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  const state = { schema: 1, settings: { quality: '720', keepAwake: false }, jobs: [{ id: 'running', status: 'downloading', progress: 75 }, { id: 'done', status: 'completed' }, { id: 'cancel', status: 'cancelling' }] }
+  await fs.writeFile(path.join(directory, 'state.json'), JSON.stringify(state))
+  const store = new Store(directory, directory)
+  assert.equal(store.data.settings.quality, '720')
+  assert.equal(store.data.settings.keepAwake, false)
+  assert.equal(store.data.jobs[0].status, 'queued')
+  assert.equal(store.data.jobs[0].progress, 0)
+  assert.equal(store.data.jobs[1].status, 'completed')
+  assert.equal(store.data.jobs[2].status, 'cancelled')
+  assert.equal(JSON.parse(await fs.readFile(store.file, 'utf8')).jobs[0].status, 'queued')
+})
+
+test('corrupted primary state restores the latest valid backup', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'downtube-store-'))
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  await fs.writeFile(path.join(directory, 'state.json'), '{invalid')
+  await fs.writeFile(path.join(directory, 'state.json.bak'), JSON.stringify({ schema: 1, settings: { quality: '480' }, jobs: [{ id: 'saved', status: 'completed' }] }))
+  const store = new Store(directory, directory)
+  assert.equal(store.data.settings.quality, '480')
+  assert.equal(store.data.jobs[0].id, 'saved')
+  assert.equal(JSON.parse(await fs.readFile(store.file, 'utf8')).settings.quality, '480')
+})

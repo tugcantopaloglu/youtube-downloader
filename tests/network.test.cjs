@@ -1,0 +1,47 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs/promises')
+const os = require('node:os')
+const path = require('node:path')
+const { createHash } = require('node:crypto')
+const test = require('node:test')
+const { request, downloadVerified } = require('../electron/network.cjs')
+
+test('verified downloads preserve pre-existing destination files', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'downtube-network-'))
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  const file = path.join(directory, 'existing.exe')
+  await fs.writeFile(file, 'original file')
+  t.mock.method(globalThis, 'fetch', async () => new Response('download', { headers: { 'Content-Type': 'application/octet-stream' } }))
+  const digest = createHash('sha256').update('download').digest('hex')
+  await assert.rejects(downloadVerified({ browser_download_url: 'https://example.com/tool', size: 8 }, file, digest), { code: 'EEXIST' })
+  assert.equal(await fs.readFile(file, 'utf8'), 'original file')
+})
+
+test('verified downloads save matching bytes and remove failed new files', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'downtube-network-'))
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  const body = Buffer.from('verified download')
+  t.mock.method(globalThis, 'fetch', async () => new Response(body, { headers: { 'Content-Type': 'application/octet-stream' } }))
+  const asset = { browser_download_url: 'https://example.com/tool', size: body.length }
+  const digest = createHash('sha256').update(body).digest('hex')
+  const destination = path.join(directory, 'tool.exe')
+  let progress
+  await downloadVerified(asset, destination, digest, value => { progress = value })
+  assert.deepEqual(await fs.readFile(destination), body)
+  assert.equal(progress, 100)
+  const invalid = path.join(directory, 'invalid.exe')
+  await assert.rejects(downloadVerified(asset, invalid, '0'.repeat(64)))
+  await assert.rejects(fs.stat(invalid), { code: 'ENOENT' })
+})
+
+test('download requests reject insecure URLs and HTML without touching a destination', async t => {
+  const mock = t.mock.method(globalThis, 'fetch', async () => new Response('<html>error</html>', { headers: { 'Content-Type': 'text/html' } }))
+  await assert.rejects(request('http://example.com/tool'))
+  assert.equal(mock.mock.callCount(), 0)
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'downtube-network-'))
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  const destination = path.join(directory, 'tool.exe')
+  await fs.writeFile(destination, 'original')
+  await assert.rejects(downloadVerified({ browser_download_url: 'https://example.com/tool', size: 18 }, destination, '0'.repeat(64)))
+  assert.equal(await fs.readFile(destination, 'utf8'), 'original')
+})
